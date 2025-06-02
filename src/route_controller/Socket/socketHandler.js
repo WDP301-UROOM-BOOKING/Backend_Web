@@ -2,8 +2,9 @@
 const ChatMessage = require("../../models/chatMessage");
 
 module.exports = function (io, socket, users) {
-  console.log("✅ A user connected:", socket.id);
 
+  console.log("🔌 users:", users);
+  
   // --- 1. Đăng ký user khi kết nối ---
   socket.on("register", (userId) => {
     users.set(userId, socket.id);
