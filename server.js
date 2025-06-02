@@ -29,25 +29,27 @@ const server = http.createServer(app);
 
 
 //from cors
+const allowedOrigins =
+  process.env.NODE_ENV === "production"
+    ? [
+        process.env.FRONTEND_CUSTOMER_URL_PRODUCT,
+        process.env.FRONTEND_OWNER_URL_PRODUCT,
+      ]
+    : [
+        process.env.FRONTEND_CUSTOMER_URL_DEVELOPMENT,
+        process.env.FRONTEND_OWNER_URL_DEVELOPMENT,
+      ];
+
+// CORS middleware
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_CUSTOMER_URL_PRODUCT, 
-    process.env.FRONTEND_CUSTOMER_URL_DEVELOPMENT, 
-    process.env.FRONTEND_OWNER_URL_DEVELOPMENT,
-    process.env.FRONTEND_OWNER_URL_PRODUCT,
-  ],
+  origin: allowedOrigins,
   credentials: true
 }));
 
-//Socket
+// Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: [
-      process.env.FRONTEND_CUSTOMER_URL_PRODUCT, 
-      process.env.FRONTEND_CUSTOMER_URL_DEVELOPMENT, 
-      process.env.FRONTEND_OWNER_URL_DEVELOPMENT,
-      process.env.FRONTEND_OWNER_URL_PRODUCT,
-    ],
+    origin: allowedOrigins,
     credentials: true
   }
 });

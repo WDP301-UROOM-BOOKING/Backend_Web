@@ -22,9 +22,9 @@ exports.loginCustomer = async (req, res) => {
       return res.status(401).json({ MsgNo: "Email or password is incorrect" });
     }
 
-    if (user.role !== "CUSTOMER") { 
-      return res.status(401).json({ MsgNo: "Email or password is incorrect" });
-    }
+    // if (user.role !== "CUSTOMER") { 
+    //   return res.status(401).json({ MsgNo: "Email or password is incorrect" });
+    // }
 
     // So sánh mật khẩu
     const isMatch = await bcrypt.compare(password, user.password);
