@@ -5,7 +5,7 @@ const Hotel = require("./src/models/hotel");
 const Room = require("./src/models/room");
 require("dotenv").config();
 
-const uri = process.env.MONGODB_URI;
+const uri = process.env.MONGODB_URI_DEVELOPMENT;
 
 const calculateTotalPrice = (rooms) => {
   if (!rooms || !Array.isArray(rooms)) return 0;

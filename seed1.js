@@ -5,7 +5,7 @@ require("dotenv").config();
 
 // Kết nối MongoDB
 mongoose
-  .connect(`${process.env.MONGODB_URI}`, {
+  .connect(`${process.env.MONGODB_URI_DEVELOPMENT}`, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
@@ -248,6 +248,21 @@ async function seedUsers() {
         image: {
           public_ID: "avatar_customer2",
           url: "https://cellphones.com.vn/sforum/wp-content/uploads/2024/02/anh-avatar-cute-71.jpg",
+        },
+      },
+      {
+        name: "Admin Uroom",
+        email: "ad1@gm.com",
+        password: "12345678",
+        role: "ADMIN",
+        phoneNumber: "0934726072",
+        address: "456 Hùng Vương, Đà Nẵng",
+        isVerified: true,
+        isLocked: false,
+        cmnd: "047003012312",
+        image: {
+          public_ID: "avatar_admin1",
+          url: "https://cdn-icons-png.freepik.com/512/4880/4880553.png",
         },
       },
     ];

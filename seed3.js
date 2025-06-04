@@ -3,7 +3,7 @@ const Hotel = require("./src/models/hotel"); // sửa đúng đường dẫn
 const User = require("./src/models/user");
 require("dotenv").config();
 
-const uri = process.env.MONGODB_URI; // đổi theo DB của bạn
+const uri = process.env.MONGODB_URI_DEVELOPMENT; // đổi theo DB của bạn
 
 async function updateUsers() {
   try {

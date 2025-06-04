@@ -43,17 +43,18 @@ module.exports = function (io, socket, users) {
 
     if (receiverSocketId) {
       // Kiểm tra xem receiver đã vào room chưa
-      const socketsInRoom = await io.in(roomId).allSockets(); // Trả về Set các socketId trong room
+      const socketsInRoom = await io.in(roomId).allSockets();
+      console.log("socketsInRoom: ", socketsInRoom); // Trả về Set các socketId trong room
       if (socketsInRoom.has(receiverSocketId)) {
         // Nếu receiver đã ở trong room, gửi tin nhắn qua room
         io.to(roomId).emit("receive-message", msgPayload);
       } else {
-        // Nếu receiver chưa ở trong room, gửi trực tiếp tin nhắn và yêu cầu join room
-        io.to(receiverSocketId).emit("receive-message", msgPayload);
         io.to(receiverSocketId).emit("force-join-room", {
           roomId,
           partnerId: senderId,
         });
+        // Nếu receiver chưa ở trong room, gửi trực tiếp tin nhắn và yêu cầu join room
+        io.to(receiverSocketId).emit("receive-message", msgPayload);
       }
     } else {
       // Nếu receiver không online, có thể gửi tin nhắn qua room hoặc bỏ qua (tuỳ app)
