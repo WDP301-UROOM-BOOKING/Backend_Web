@@ -40,6 +40,10 @@ const reservationSchema = new Schema(
           type: Number,
           required: true,
         },
+        selectDate: [{
+          type: Date,
+          required: true
+        }]
       },
     ],
     checkInDate: {

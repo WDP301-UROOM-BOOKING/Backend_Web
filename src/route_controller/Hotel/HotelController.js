@@ -139,18 +139,18 @@ exports.getHotelsByOwnerId = asyncHandler(async (req, res) => {
     message: "Get filtered hotels success",
   });
 });
-
+// remove favorite hotel
 exports.removeFavoriteHotel = asyncHandler(async (req, res) => {
   const userId = req.user._id; // Lấy từ token
   const { hotelId } = req.body;
-
+// check userId and hotelId
   if (!userId || !hotelId) {
     return res.status(400).json({
       error: true,
       message: "Missing userId or hotelId",
     });
   }
-
+// check user
   const user = await User.findById(userId);
   if (!user) {
     return res.status(404).json({
@@ -158,11 +158,11 @@ exports.removeFavoriteHotel = asyncHandler(async (req, res) => {
       message: "User not found",
     });
   }
-
+// remove hotelId from favorites, compare by toString()
   user.favorites = user.favorites.filter(
     (favId) => favId.toString() !== hotelId
   );
-
+// save user
   await user.save();
 
   return res.status(200).json({
@@ -171,18 +171,18 @@ exports.removeFavoriteHotel = asyncHandler(async (req, res) => {
     favorites: user.favorites,
   });
 });
-
+//add favorite hotel
 exports.addFavoriteHotel = asyncHandler(async (req, res) => {
   const userId = req.user._id; // lấy từ token
   const { hotelId } = req.body;
-
+// check hotelId
   if (!hotelId) {
     return res.status(400).json({
       error: true,
       message: "Missing hotelId",
     });
   }
-
+// check user
   const user = await User.findById(userId);
   if (!user) {
     return res.status(404).json({
@@ -190,7 +190,7 @@ exports.addFavoriteHotel = asyncHandler(async (req, res) => {
       message: "User not found",
     });
   }
-
+// check hotel exists by hotelId
   const hotelExists = await Hotel.findById(hotelId);
   if (!hotelExists) {
     return res.status(404).json({
@@ -198,14 +198,14 @@ exports.addFavoriteHotel = asyncHandler(async (req, res) => {
       message: "Hotel not found",
     });
   }
-
+// check hotelId is in favorites of user
   if (user.favorites.includes(hotelId)) {
     return res.status(409).json({
       error: true,
       message: "Hotel is already in favorites",
     });
   }
-
+// add hotelId to favorites
   user.favorites.push(hotelId);
   await user.save();
 

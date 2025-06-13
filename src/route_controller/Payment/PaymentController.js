@@ -12,7 +12,7 @@ exports.createBooking = asyncHandler(async (req, res) => {
   const user = req.user;
   const { hotelId, checkInDate, checkOutDate, roomDetails, serviceDetails, totalPrice } =
     req.body.params;
-
+  console.log("serviceDetails: ", serviceDetails);
   try {
     if (!user._id || !hotelId || !checkInDate || !checkOutDate) {
       return res
@@ -104,13 +104,14 @@ exports.createBooking = asyncHandler(async (req, res) => {
       })),
       services: serviceDetails?.map(service => ({
         service: service._id,
-        quantity: service.quantity
+        quantity: service.quantity,
+        selectDate: service.selectDate
       })) || [],
       status: "NOT PAID",
     });
 
     await reservation.save();
-
+    
     // Update room availability
     for (const { room, amount } of roomDetails) {
       const roomAvailability = new RoomAvailability({
