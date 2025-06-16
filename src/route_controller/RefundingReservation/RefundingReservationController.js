@@ -39,7 +39,54 @@ const getRefundingReservationsByUserId = asyncHandler(async (req, res) => {
   });
 });
 
+// Update banking information for refund
+const updateBankingInfo = async (req, res) => {
+  try {
+    const { refundId } = req.params;
+    const { accountHolderName, accountNumber, bankName } = req.body;
+
+    // Validate required fields
+    if (!accountHolderName || !accountNumber || !bankName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide all banking information',
+      });
+    }
+
+    const refund = await RefundingReservation.findById(refundId);
+
+    if (!refund) {
+      return res.status(404).json({
+        success: false,
+        message: 'Refund request not found',
+      });
+    }
+
+    // Update banking information
+    refund.accountHolderName = accountHolderName;
+    refund.accountNumber = accountNumber;
+    refund.bankName = bankName;
+    refund.status = 'PENDING'; // Change status from WAITING_FOR_BANK_INFO to PENDING
+
+    await refund.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Banking information updated successfully',
+      data: refund,
+    });
+
+  } catch (error) {
+    console.error('Error updating banking info:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+};
+
 module.exports = {
   createRefundingReservation,
-  getRefundingReservationsByUserId
+  getRefundingReservationsByUserId,
+  updateBankingInfo
 };

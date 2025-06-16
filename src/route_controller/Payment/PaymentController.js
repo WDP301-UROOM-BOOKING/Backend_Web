@@ -12,6 +12,8 @@ exports.createBooking = asyncHandler(async (req, res) => {
   const { hotelId, checkInDate, checkOutDate, roomDetails, totalPrice } =
     req.body.params;
 
+    console.log("roomdetails: ", roomDetails);
+
   try {
     if (!user._id || !hotelId || !checkInDate || !checkOutDate) {
       return res

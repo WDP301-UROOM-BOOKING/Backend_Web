@@ -541,42 +541,6 @@ const hotelImage = [
   "https://i.pinimg.com/736x/ad/54/bf/ad54bf18bebd9d71103b68cee09fe6fb.jpg",
   "https://i.pinimg.com/736x/f3/3f/eb/f33feb864f7f72b753b48c8a9003d405.jpg",
   "https://i.pinimg.com/736x/1c/31/7c/1c317c4053b0835a3a54944ace8b66f0.jpg",
-  "https://i.pinimg.com/736x/8a/eb/20/8aeb20492a1c5dd51909352ea4f3c570.jpg",
-  "https://i.pinimg.com/736x/c0/74/a3/c074a3d76474c26eb9694631edd6c59e.jpg",
-  "https://i.pinimg.com/736x/10/1b/ae/101bae2e28dc30ea889ba93d6c058886.jpg",
-  "https://i.pinimg.com/736x/3f/68/a8/3f68a890de2144e224e46fb21c756a41.jpg",
-  "https://i.pinimg.com/736x/ab/5d/d4/ab5dd428955149bc39f3e92edbf01eb1.jpg",
-  "https://i.pinimg.com/736x/22/7b/3b/227b3b3096fa77288e15617b4947af8b.jpg",
-  "https://i.pinimg.com/736x/1e/82/db/1e82db2dfcee66dbd3dab40359a0533a.jpg",
-  "https://i.pinimg.com/736x/96/4d/1d/964d1dc9693e6286c48a3f5cfd1cbbb0.jpg",
-  "https://i.pinimg.com/736x/0a/4d/c3/0a4dc359a857b9c98fc7e0d99b8a80d5.jpg",
-  "https://i.pinimg.com/736x/17/1e/af/171eaf32f503df8a085367a8bf155da9.jpg",
-  "https://i.pinimg.com/736x/36/84/90/368490a019e5376e3fc21c0c5f2f5e92.jpg",
-  "https://i.pinimg.com/736x/03/40/8b/03408b1ce609497438bb60a07a764398.jpg",
-  "https://i.pinimg.com/736x/3f/64/c6/3f64c6d642c7128f11ee6ac26138407a.jpg",
-  "https://i.pinimg.com/736x/89/c0/92/89c09207356de3fe14b7d5692c4a3411.jpg",
-  "https://i.pinimg.com/736x/89/c0/92/89c09207356de3fe14b7d5692c4a3411.jpg",
-  "https://i.pinimg.com/736x/5b/b5/08/5bb508fc74fd9864107216cf1e9ef450.jpg",
-  "https://i.pinimg.com/736x/77/d1/74/77d17473cf4f1c3eb5aec7e381930025.jpg",
-  "https://i.pinimg.com/736x/88/29/b1/8829b159416c99734c1b742be4ad9f09.jpg",
-  "https://i.pinimg.com/736x/02/27/3f/02273f2568b055775825730c29f5001b.jpg",
-  "https://i.pinimg.com/736x/da/fc/fa/dafcfa156af0f8c61036f9131c83fe20.jpg",
-  "https://i.pinimg.com/736x/1a/b2/c7/1ab2c74722fc1a74d874af4071bede51.jpg",
-  "https://i.pinimg.com/736x/4f/bd/68/4fbd684337df5152f4d6e33e4ff52b38.jpg",
-  "https://i.pinimg.com/736x/6f/d1/2d/6fd12d8f7559c7a21c52aa782d22287f.jpg",
-  "https://i.pinimg.com/736x/86/4d/4b/864d4beed3779d530b4388052d9b2cb6.jpg",
-  "https://i.pinimg.com/736x/2b/46/fc/2b46fc944691029b2f49c5fa2eef893e.jpg",
-  "https://i.pinimg.com/736x/42/04/c8/4204c8c328a8d86280dda711c545f9cf.jpg",
-  "https://i.pinimg.com/736x/6a/aa/cd/6aaacd9a8009044b595ffcaa5aca7681.jpg",
-  "https://i.pinimg.com/736x/2d/f6/11/2df6114307d9b93b925026b275b392a3.jpg",
-  "https://i.pinimg.com/736x/cd/4e/a1/cd4ea1470db39a3c43021ab7d8a96db8.jpg",
-  "https://i.pinimg.com/736x/6e/8a/c9/6e8ac97a5c24098c4844153b744fa2a4.jpg",
-  "https://i.pinimg.com/736x/6e/8a/c9/6e8ac97a5c24098c4844153b744fa2a4.jpg",
-  "https://i.pinimg.com/736x/fa/02/06/fa0206cb4a813d05f5b56dc1c4681a8b.jpg",
-  "https://i.pinimg.com/736x/0e/97/13/0e971336348fabb5a30df2ca76b512dd.jpg",
-  "https://i.pinimg.com/736x/ad/54/bf/ad54bf18bebd9d71103b68cee09fe6fb.jpg",
-  "https://i.pinimg.com/736x/f3/3f/eb/f33feb864f7f72b753b48c8a9003d405.jpg",
-  "https://i.pinimg.com/736x/1c/31/7c/1c317c4053b0835a3a54944ace8b66f0.jpg",
 ];
 
 const servicesName = [
@@ -621,7 +585,7 @@ const servicesName = [
   "Asian-European Buffet Night",
   "Luxury Couple Spa Suite",
   "Sunrise Fitness Studio",
-  "Hourly Motorbike Hire"
+  "Hourly Motorbike Hire",
 ];
 
 const serviceDescriptions = [
@@ -666,9 +630,8 @@ const serviceDescriptions = [
   "Taste culinary fusions with rotating dishes each night of the week.",
   "Designed for couples, this spa suite offers privacy and pampering.",
   "Morning classes and equipment with beach sunrise views.",
-  "Need just a few hours? Our flexible motorbike rental plans got you."
+  "Need just a few hours? Our flexible motorbike rental plans got you.",
 ];
-
 
 //Bỏ Facility dùng HotelFacility - bỏ trường HotelID
 //Bỏ RoomID trong roomFacility
@@ -693,22 +656,23 @@ const bedTypes = [
     bedWidth: "Width 90 - 130 cm",
   },
   {
-    name: "Double Bed", 
+    name: "Double Bed",
     description: "A double bed ideal for two people. Width: 131 - 150 cm.",
     bedWidth: "Width 131 - 150 cm",
   },
   {
     name: "King Bed",
-    description: "A king-size bed for extra comfort, suitable for two or more people. Width: 151 - 180 cm.",
+    description:
+      "A king-size bed for extra comfort, suitable for two or more people. Width: 151 - 180 cm.",
     bedWidth: "Width 151 - 180 cm",
   },
   {
     name: "Super King Beds",
-    description: "Room with two large single beds, suitable for two people. Total width: 181 - 210 cm.",
+    description:
+      "Room with two large single beds, suitable for two people. Total width: 181 - 210 cm.",
     bedWidth: "Width 181 - 210 cm",
   },
 ];
-
 
 // Insert Beds
 const bedDocs = db.beds.insertMany(bedTypes);
@@ -892,8 +856,8 @@ for (let i = 0; i < 60; i++) {
     .slice(0, Math.floor(Math.random() * 3) + 3);
 
   let hotelServiceIds = [serviceIds]
-  .sort(() => 0.5 - Math.random())
-  .slice(0, Math.floor(Math.random() * 3) + 3);
+    .sort(() => 0.5 - Math.random())
+    .slice(0, Math.floor(Math.random() * 3) + 3);
 
   let images = [];
   let numImages = 5;
@@ -916,12 +880,14 @@ for (let i = 0; i < 60; i++) {
       address: hotelAddresses[i],
       adminStatus: "APPROVED",
       ownerStatus: "ACTIVE",
+      phoneNumber: "0901234567",
+      email: "DaNangLunVuiTUoi@hotel.com",
       services: i <= 14 ? serviceIds.slice(i * 3, i * 3 + 3) : [],
       facilities: hotelFacilityIds,
       star: Math.floor(Math.random() * 5) + 1, // 2-5 sao
       rating: Math.floor(Math.random() * 5) + 1, // 1-5 rating
       pricePerNight:
-      Math.floor(Math.random() * ((2000 - 500) / 10 + 1)) * 10 + 500,
+        Math.floor(Math.random() * ((2000 - 500) / 10 + 1)) * 10 + 500,
       images: images,
       checkInStart: "12:00",
       checkInEnd: "13:00",
@@ -960,7 +926,7 @@ for (let i = 0; i < 50; i++) {
       price: Math.floor(Math.random() * ((1000 - 100) / 10 + 1)) * 10 + 100,
       capacity: Math.floor(Math.random() * 4) + 1,
       description:
-      roomDescriptions[Math.floor(Math.random() * roomDescriptions.length)],
+        roomDescriptions[Math.floor(Math.random() * roomDescriptions.length)],
       images: images,
       facilities: shuffledFacilities,
       quantity: Math.floor(Math.random() * 5) + 3,
@@ -1005,12 +971,14 @@ for (let i = 0; i < hotelNames.length; i++) {
       address: hotelAddresses[i],
       adminStatus: "APPROVED",
       ownerStatus: "ACTIVE",
+      phoneNumber: "0901234567",
+      email: "DaNangLunVuiTUoi@hotel.com",
       services: i <= 14 ? serviceIds.slice(i * 3, i * 3 + 3) : [],
       facilities: hotelFacilityIds,
       star: Math.floor(Math.random() * 5) + 1, // 2-5 sao
       rating: Math.floor(Math.random() * 5) + 1, // 1-5 rating
       pricePerNight:
-      Math.floor(Math.random() * ((2000 - 500) / 10 + 1)) * 10 + 500, // 5000 - 2000
+        Math.floor(Math.random() * ((2000 - 500) / 10 + 1)) * 10 + 500, // 5000 - 2000
       images: images,
       checkInStart: "12:00",
       checkInEnd: "13:00",
@@ -1218,3 +1186,167 @@ db.users.updateOne(
     },
   }
 );
+// Add this to your seed2.js file after the existing code
+
+// Notification seed data
+const notificationTypes = [
+  'NEW_MESSAGE',
+  'BOOKING_CONFIRMED',
+  'BOOKING_CANCELLED',
+  // 'BOOKING_UPDATED',
+  'PAYMENT_SUCCESS',
+  'REFUND_PROCESSED',
+  // 'REFUND_APPROVED',
+  // 'REFUND_REJECTED',
+  // 'CHECK_IN_REMINDER',
+  // 'CHECK_OUT_REMINDER',
+  'PROMOTION_AVAILABLE',
+  // 'SYSTEM_ANNOUNCEMENT'
+];
+
+const priorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+
+// Function to get random date within last 30 days
+function getRandomNotificationDate() {
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+  return new Date(thirtyDaysAgo.getTime() + Math.random() * (now.getTime() - thirtyDaysAgo.getTime()));
+}
+
+// Insert Notifications
+print("📱 Creating notifications...");
+
+const notificationData = [];
+
+// Create 100 notifications for testing
+for (let i = 0; i < 100; i++) {
+  const randomType = notificationTypes[Math.floor(Math.random() * notificationTypes.length)];
+  const randomUserId = Math.floor(Math.random() * 5) + 11;
+  const randomPriority = priorities[Math.floor(Math.random() * priorities.length)];
+  const isRead = Math.random() > 0.3; // 70% chance to be read
+  const createdAt = getRandomNotificationDate();
+  
+  let title = '';
+  let message = '';
+  let data = {
+    additionalData: {}
+  };
+
+  // Set title and message based on type
+  switch (randomType) {
+    case 'NEW_MESSAGE':
+      title = 'New Message';
+      message = 'You have a new message from hotel staff';
+      // data.additionalData = {
+      //   senderName: 'Hotel Manager',
+      //   messagePreview: 'Thank you for your inquiry...'
+      // };
+      break;
+
+    case 'BOOKING_CONFIRMED':
+      title = 'Booking Confirmed';
+      message = 'Your hotel booking has been confirmed successfully';
+      // data.additionalData = {
+      //   hotelName: hotelNames[Math.floor(Math.random() * hotelNames.length)],
+      //   checkInDate: new Date(Date.now() + Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      //   reservationCode: 'RES' + Math.floor(Math.random() * 10000)
+      // };
+      break;
+
+    case 'BOOKING_CANCELLED':
+      title = 'Booking Cancelled';
+      message = 'Your booking has been cancelled';
+      // data.additionalData = {
+      //   hotelName: hotelNames[Math.floor(Math.random() * hotelNames.length)],
+      //   reason: 'Customer request'
+      // };
+      break;
+
+    case 'PAYMENT_SUCCESS':
+      title = 'Payment Successful';
+      message = 'Your payment has been processed successfully';
+      // data.additionalData = {
+      //   amount: Math.floor(Math.random() * 5000000) + 500000,
+      //   hotelName: hotelNames[Math.floor(Math.random() * hotelNames.length)],
+      //   paymentMethod: 'Credit Card'
+      // };
+      break;
+
+    case 'REFUND_PROCESSED':
+      title = 'Refund Processed';
+      message = 'Your refund has been processed successfully';
+      // data.refundAmount = Math.floor(Math.random() * 3000000) + 200000;
+      // data.additionalData = {
+      //   hotelName: hotelNames[Math.floor(Math.random() * hotelNames.length)]
+      // };
+      break;
+
+    case 'PROMOTION_AVAILABLE':
+      title = 'New Promotion Available';
+      message = 'Special discount available for your next booking';
+      // data.additionalData = {
+      //   promotionName: 'Summer Sale',
+      //   discountValue: [10, 15, 20, 25, 30][Math.floor(Math.random() * 5)],
+      //   promoCode: 'SAVE' + Math.floor(Math.random() * 100)
+      // };
+      break;
+
+    default:
+      title = 'Notification';
+      message = 'You have a new notification';
+      break;
+  }
+
+  let notificationDoc = {
+    userId: randomUserId,
+    type: randomType,
+    title: title,
+    message: message,
+    data: data,
+    isRead: isRead,
+    isDeleted: false,
+    priority: randomPriority,
+    createdAt: createdAt,
+    updatedAt: createdAt,
+    expiresAt: new Date(createdAt.getTime() + (30 * 24 * 60 * 60 * 1000))
+  };
+
+  // Add readAt if notification is read
+  if (isRead) {
+    notificationDoc.readAt = new Date(createdAt.getTime() + Math.random() * (24 * 60 * 60 * 1000));
+  }
+
+  notificationData.push(notificationDoc);
+}
+
+// Insert all notifications at once
+try {
+  const notificationResult = db.notifications.insertMany(notificationData);
+  print(`✅ Successfully inserted ${notificationResult.insertedIds.length} notifications`);
+  
+  // Print statistics
+  const notificationStats = db.notifications.aggregate([
+    {
+      $group: {
+        _id: '$type',
+        count: { $sum: 1 },
+        unreadCount: {
+          $sum: { $cond: [{ $eq: ['$isRead', false] }, 1, 0] }
+        }
+      }
+    },
+    { $sort: { count: -1 } }
+  ]).toArray();
+
+  print('📊 Notification Statistics:');
+  notificationStats.forEach(stat => {
+    print(`- ${stat._id}: ${stat.count} total (${stat.unreadCount} unread)`);
+  });
+
+  const totalUnread = db.notifications.countDocuments({ isRead: false });
+  const totalRead = db.notifications.countDocuments({ isRead: true });
+  print(`📈 Overall: ${totalRead} read, ${totalUnread} unread`);
+
+} catch (error) {
+  print(`❌ Error inserting notifications: ${error}`);
+}

@@ -14,7 +14,6 @@ const checkGuest = (req, res, next) => {
     if (err) return res.status(403).json({ message: "Invalid token" });
     if (decoded.user.role !== "CUSTOMER")
       return res.status(403).json({ message: "Access denied" });
-
     req.user = decoded.user;
     next();
   });

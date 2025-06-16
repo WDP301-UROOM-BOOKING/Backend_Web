@@ -9,7 +9,7 @@ const isAdmin = (req, res, next) => {
       console.log(err.message);
       return res.status(403).json({ message: "Invalid token" });
     }
-    if (decoded.user.role !== "admin") {
+    if (decoded.user.role !== "ADMIN") {
       return res.status(403).json({ message: "Access denied, You don't have admin role" });
     }
     req.user = decoded.user;

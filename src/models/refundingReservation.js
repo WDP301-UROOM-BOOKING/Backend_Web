@@ -20,7 +20,7 @@ const refundingReservationSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["PENDING", "APPROVED", "REJECTED"],
+      enum: ["WAITING_FOR_BANK_INFO", "PENDING", "APPROVED", "REJECTED"],
       default: "PENDING",
     },
     reason: {
@@ -29,15 +29,12 @@ const refundingReservationSchema = new Schema(
     },
     accountHolderName: {
       type: String,
-      required: true,
     },
     accountNumber: {
       type: String,
-      required: true,
     },
     bankName: {
       type: String,
-      required: true,
     },
     requestDate: {
       type: Date,

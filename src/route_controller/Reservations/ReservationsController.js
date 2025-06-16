@@ -129,9 +129,7 @@ const autoUpdateNotPaidReservation = asyncHandler(async () => {
           user: r.user._id,
           reservation: r._id,
           refundAmount: r.totalPrice,
-          accountHolderName: r.user.accountHolderName ?? "Hoang Nguyen",
-          accountNumber: r.user.accountNumber ?? "Le Kim Hoang Nguyen",
-          bankName: r.user.bankName ?? "Techcom Bank",
+          status: "WAITING_FOR_BANK_INFO",
         });
 
         try {

@@ -84,6 +84,7 @@ app.use("/api/hotelservices", HotelServiceRoute);
 
 app.use("/api/chat", ChatRoutes);
 app.use("/api/monthly-payment", MonthlyPaymentRoute);
+app.use('/api/notifications', require('./src/route_controller/Notification/NotificationRoute'));
 
 const users = new Map(); // lưu trữ userId -> socketId
 

@@ -5,5 +5,6 @@ const RefundingReservationController= require("./RefundingReservationController"
 
 RefundingReservationRouter.post("/create",checkCustomer,RefundingReservationController.createRefundingReservation);
 RefundingReservationRouter.get("/by_userId",checkCustomer,RefundingReservationController.getRefundingReservationsByUserId);
+RefundingReservationRouter.put("/banking-info/:refundId",RefundingReservationController.updateBankingInfo);
 
 module.exports = RefundingReservationRouter;
