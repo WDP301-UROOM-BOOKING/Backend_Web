@@ -28,6 +28,24 @@ const reservationSchema = new Schema(
         },
       },
     ],
+    services: [
+      {
+        _id: false,
+        service: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "HotelService",
+          required: true,
+        },
+        quantity: {
+          type: Number,
+          required: true,
+        },
+        selectDate: [{
+          type: Date,
+          required: true
+        }]
+      },
+    ],
     checkInDate: {
       type: Date,
       required: true,
@@ -58,7 +76,5 @@ const reservationSchema = new Schema(
   },
   { timestamps: true, versionKey: false }
 );
-
-
 
 module.exports = mongoose.model("Reservation", reservationSchema);

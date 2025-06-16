@@ -5,15 +5,23 @@ const RoomAvailability = require("../../models/roomAvailability");
 const Room = require("../../models/room");
 const mongoose = require("mongoose");
 const room = require("../../models/room");
+const HotelService = require("../../models/hotelService");
 
 //Create booking with not paid reservation
 exports.createBooking = asyncHandler(async (req, res) => {
   const user = req.user;
-  const { hotelId, checkInDate, checkOutDate, roomDetails, totalPrice } =
-    req.body.params;
+  const {
+    hotelId,
+    checkInDate,
+    checkOutDate,
+    roomDetails,
+    serviceDetails,
+    totalPrice,
+  } = req.body.params;
 
-    console.log("roomdetails: ", roomDetails);
+  console.log("roomdetails: ", roomDetails);
 
+  console.log("serviceDetails: ", serviceDetails);
   try {
     if (!user._id || !hotelId || !checkInDate || !checkOutDate) {
       return res
@@ -69,8 +77,7 @@ exports.createBooking = asyncHandler(async (req, res) => {
           dateMap.set(dateStr, currentBooked + booking.bookedQuantity);
 
           // Move to next day
-          currentDate.set;
-          Date(currentDate.getDate() + 1);
+          currentDate.setDate(currentDate.getDate() + 1);
         }
       }
 
@@ -93,43 +100,50 @@ exports.createBooking = asyncHandler(async (req, res) => {
       }
     }
 
-    // Tạo đơn đặt phòng
+    // Create new reservation
     const reservation = new Reservation({
       user: user._id,
       hotel: hotelId,
-      rooms: roomDetails.map((item) => ({
-        room: item.room._id,
-        quantity: item.amount,
+      checkInDate: checkIn,
+      checkOutDate: checkOut,
+      totalPrice: totalPrice,
+      rooms: roomDetails.map(({ room, amount }) => ({
+        room: room._id,
+        quantity: amount,
       })),
-      checkInDate,
-      checkOutDate,
-      totalPrice,
+      services:
+        serviceDetails?.map((service) => ({
+          service: service._id,
+          quantity: service.quantity,
+          selectDate: service.selectDate,
+        })) || [],
       status: "NOT PAID",
     });
-    reservation.save();
 
-    for (let room of roomDetails) {
+    await reservation.save();
+
+    // Update room availability
+    for (const { room, amount } of roomDetails) {
       const roomAvailability = new RoomAvailability({
-        room: room.room._id,
-        checkInDate,
-        checkOutDate,
-        bookedQuantity: room.amount,
+        room: room._id,
         reservation: reservation._id,
+        checkInDate: checkIn,
+        checkOutDate: checkOut,
+        bookedQuantity: amount,
       });
-      roomAvailability.save();
+      await roomAvailability.save();
     }
 
     return res.status(201).json({
-      error: false,
-      message:
-        "Reservation created successfully. Please finish payment in 5 minutes",
-      reservation,
+      message: "Create booking successfully",
+      reservation: reservation,
     });
-  } catch (err) {
-    console.log(err.message);
-    return res
-      .status(500)
-      .json({ error: true, message: "Failed to create reservation" });
+  } catch (error) {
+    console.error("Error creating booking:", error);
+    return res.status(500).json({
+      error: true,
+      message: "Error creating booking",
+    });
   }
 });
 
@@ -264,6 +278,8 @@ exports.getReservations = asyncHandler(async (req, res) => {
     res.json({ error: false, reservations });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: true, message: "Failed to get reservations" });
+    res
+      .status(500)
+      .json({ error: true, message: "Failed to get reservations" });
   }
 });
