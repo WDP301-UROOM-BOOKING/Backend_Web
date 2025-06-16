@@ -320,6 +320,7 @@ exports.deleteFeedback = async (req, res) => {
 
 
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+// AI kiểm tra nội dung từ ngữ không phù hợp
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const  checkProfanityWithGemini = async (content) => {

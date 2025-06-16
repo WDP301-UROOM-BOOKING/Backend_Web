@@ -263,11 +263,12 @@ exports.getTop3HotelsThisMonth = async (req, res) => {
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
+
     const endOfMonth = new Date();
     endOfMonth.setMonth(endOfMonth.getMonth() + 1);
     endOfMonth.setDate(1);
     endOfMonth.setHours(0, 0, 0, 0);
-
+//  Lọc các khách sạn có  các trạng thái COMPLETED checked in checkout trong tháng
     const topHotels = await Reservation.aggregate([
       {
         $match: {
