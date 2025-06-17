@@ -326,6 +326,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const  checkProfanityWithGemini = async (content) => {
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
   try {
+    // tạo prompt để kiểm tra nội dung 
     const prompt = `Kiểm tra nội dung sau có chứa từ ngữ không phù hợp hay không (trả lời chỉ "YES" hoặc "NO") * CHÚ Ý HÃY KIỂM TRA TRONG TẤT CẢ CÁC LOẠI NGÔN NGỮ: "${content}"`;
 
     const result = await model.generateContent(prompt);
