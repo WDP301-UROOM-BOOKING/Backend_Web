@@ -219,8 +219,8 @@ exports.checkoutBooking = asyncHandler(async (req, res) => {
       metadata: {
         reservationId: reservationId.toString(),
       },
-      success_url: `${process.env.REACT_APP_FRONTEND_CUSTOMER_URL_DEVELOPMENT}/payment_success`,
-      cancel_url: `${process.env.REACT_APP_FRONTEND_CUSTOMER_URL_DEVELOPMENT}/payment_failed`,
+      success_url: `${process.env.REACT_APP_FRONTEND_CUSTOMER_URL_DEVELOPMENT}/payment_success?${reservationId}`,
+      cancel_url: `${process.env.REACT_APP_FRONTEND_CUSTOMER_URL_DEVELOPMENT}/payment_failed?${reservationId}`,
     });
 
     return res.status(200).json({
