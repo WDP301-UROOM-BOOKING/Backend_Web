@@ -256,6 +256,7 @@ exports.getHotelDetails = asyncHandler(async (req, res) => {
     message: "Get hotel details success",
   });
 });
+// top 3 hotel in month
 exports.getTop3HotelsThisMonth = async (req, res) => {
   try {
     const startOfMonth = new Date();
