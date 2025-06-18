@@ -38,8 +38,8 @@ const getRoomsByHotel = async (req, res) => {
     // Get all rooms for this hotel
     const allRooms = await Room.find({ hotel: hotelId });
 
+    // Calculate the number of rooms booked for each room
     const roomBookedQuantities = {};
-
     // Create a day-by-day occupancy map for each room
     const dailyOccupancy = {};
 
