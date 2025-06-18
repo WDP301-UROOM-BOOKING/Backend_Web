@@ -875,7 +875,7 @@ for (let i = 0; i < 60; i++) {
   if (!existingHotel) {
     let hotel = db.hotels.insertOne({
       hotelName: hotelNames[i],
-      owner: i >= 11 ? 0 : i + 1,
+      owner: i >= 53 ? 0 : i + 1,
       description: hotelDescriptions[randomIndex],
       address: hotelAddresses[i],
       adminStatus: "APPROVED",
@@ -966,7 +966,7 @@ for (let i = 0; i < hotelNames.length; i++) {
   if (!existingHotel) {
     let hotel = db.hotels.insertOne({
       hotelName: hotelNames[i],
-      owner: i >= 11 ? 0 : i + 1,
+      owner: i >= 53 ? 0 : i + 1,
       description: hotelDescriptions[randomIndex],
       address: hotelAddresses[i],
       adminStatus: "APPROVED",
