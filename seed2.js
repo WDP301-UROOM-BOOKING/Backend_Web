@@ -1042,7 +1042,7 @@ const reservationStatuses = [
   // "NOT PAID", // Chưa trả tiền
 ];
 
-for (let i = 0; i < 0; i++) {
+for (let i = 0; i < 10000; i++) {
   let randomStatus =
     reservationStatuses[Math.floor(Math.random() * reservationStatuses.length)];
 
