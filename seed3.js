@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Hotel = require("./src/models/hotel"); // sửa đúng đường dẫn
 const User = require("./src/models/user");
+const hotel = require("./src/models/hotel");
 require("dotenv").config();
 
 const uri = process.env.MONGODB_URI_DEVELOPMENT; // đổi theo DB của bạn
@@ -10,7 +11,7 @@ async function updateUsers() {
     await mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 
     // Lấy 10 hotel đầu tiên (theo thứ tự tạo hoặc _id tăng dần)
-    const hotels = await Hotel.find().limit(10).exec();
+    const hotels = await Hotel.find().exec();
 
     for (let i = 0; i < hotels.length; i++) {
       const hotel = hotels[i];
