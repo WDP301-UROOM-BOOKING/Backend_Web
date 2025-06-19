@@ -424,7 +424,7 @@ exports.acceptPayment = asyncHandler(async (req, res) => {
     }
 
     if (reservation.status === "NOT PAID") {
-      reservation.status = "PENDING";
+      reservation.status = "BOOKED";
       reservation.save();
     }
 

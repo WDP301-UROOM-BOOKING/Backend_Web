@@ -30,7 +30,7 @@ exports.calculateAvgRatingHotel = async (hotelId) => {
 exports.getAllFeedBackByHotelId = asyncHandler(async (req, res) => {
   const { hotelId } = req.params;
   console.log("hotelId: ", hotelId);
-  
+
   const { page = 1, limit = 3, sort = 1, star = 0 } = req.query;
 
   if (!hotelId) {
@@ -149,8 +149,6 @@ exports.getAllFeedBackByHotelId = asyncHandler(async (req, res) => {
   });
 });
 
-
-
 exports.likeFeedback = async (req, res) => {
   const feedbackId = req.params.id;
   const userId = req.user._id;
@@ -226,9 +224,9 @@ exports.dislikeFeedback = async (req, res) => {
 };
 exports.getFeedbackByUserId = async (req, res) => {
   try {
-    const userId = Number(req.user._id); 
+    const userId = Number(req.user._id);
 
-    const feedbacks = await Feedback.find({ user: userId }) 
+    const feedbacks = await Feedback.find({ user: userId })
       .populate("hotel")
       .populate("reservation", "checkInDate checkOutDate")
       .sort({ createdAt: -1 });
@@ -253,7 +251,7 @@ exports.getFeedbackByUserId = async (req, res) => {
     });
   }
 };
-// update review 
+// update review
 exports.updateFeedback = async (req, res) => {
   try {
     const userId = Number(req.user._id);
@@ -263,32 +261,55 @@ exports.updateFeedback = async (req, res) => {
     const feedback = await Feedback.findById(feedbackId);
 
     if (!feedback) {
-      return res.status(404).json({ error: true, message: "Feedback không tồn tại." });
+      return res
+        .status(404)
+        .json({ error: true, message: "Feedback does not exist." });
     }
 
     if (feedback.user !== userId) {
-      return res.status(403).json({ error: true, message: "Bạn không có quyền sửa feedback này." });
+      return res
+        .status(403)
+        .json({
+          error: true,
+          message: "You do not have permission to edit this feedback.",
+        });
     }
 
-    feedback.content = content || feedback.content;
-    feedback.rating = rating || feedback.rating;
+    // Check content with Gemini if updated
+    if (content) {
+      const isProfane = await checkProfanityWithGemini(content);
+      if (isProfane) {
+        console.log("Inappropriate language detected in feedback");
+        return res.status(400).json({
+          error: true,
+          message: `The content "${content}" contains inappropriate language and cannot be updated.`,
+        });
+      }
+      feedback.content = content;
+    }
+
+    if (rating) {
+      feedback.rating = rating;
+    }
+
     feedback.updatedAt = new Date();
 
     await feedback.save();
 
     return res.status(200).json({
       error: false,
-      message: "Cập nhật feedback thành công",
+      message: "Feedback updated successfully",
       data: feedback,
     });
   } catch (error) {
-    console.error("Lỗi khi cập nhật feedback:", error);
+    console.error("Error while updating feedback:", error);
     return res.status(500).json({
       error: true,
-      message: "Lỗi server khi cập nhật feedback",
+      message: "Server error while updating feedback",
     });
   }
 };
+
 //delete review
 exports.deleteFeedback = async (req, res) => {
   try {
@@ -298,11 +319,15 @@ exports.deleteFeedback = async (req, res) => {
     const feedback = await Feedback.findById(feedbackId);
 
     if (!feedback) {
-      return res.status(404).json({ error: true, message: "Feedback không tồn tại." });
+      return res
+        .status(404)
+        .json({ error: true, message: "Feedback không tồn tại." });
     }
 
     if (feedback.user !== userId) {
-      return res.status(403).json({ error: true, message: "Bạn không có quyền xoá feedback này." });
+      return res
+        .status(403)
+        .json({ error: true, message: "Bạn không có quyền xoá feedback này." });
     }
 
     await Feedback.findByIdAndDelete(feedbackId);
@@ -320,20 +345,19 @@ exports.deleteFeedback = async (req, res) => {
   }
 };
 
-
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 // AI kiểm tra nội dung từ ngữ không phù hợp
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-const  checkProfanityWithGemini = async (content) => {
+const checkProfanityWithGemini = async (content) => {
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
   try {
-    // tạo prompt để kiểm tra nội dung 
+    // tạo prompt để kiểm tra nội dung
     const prompt = `Kiểm tra nội dung sau có chứa từ ngữ không phù hợp hay không (trả lời chỉ "YES" hoặc "NO") * CHÚ Ý HÃY KIỂM TRA TRONG TẤT CẢ CÁC LOẠI NGÔN NGỮ: "${content}"`;
 
     const result = await model.generateContent(prompt);
     const responseText = result.response.text().trim();
-    console.log("responseText: ", responseText)
+    console.log("responseText: ", responseText);
     return responseText === "YES"; // Trả về true nếu có từ ngữ không phù hợp
   } catch (error) {
     console.error("Error checking content with Gemini:", error);
@@ -356,11 +380,19 @@ exports.createFeedback = async (req, res) => {
     //Kiểm tra nội dung bằng Gemini
     const isProfane = await checkProfanityWithGemini(content);
     if (isProfane) {
-      console.log("Có từ ngữ không phù hợp trong feedback")
-      return res.status(400).json({ message: `Content "${content}" contains inappropriate language and is not acceptable in feedback.` });
+      console.log("Có từ ngữ không phù hợp trong feedback");
+      return res.status(400).json({
+        message: `Content "${content}" contains inappropriate language and is not acceptable in feedback.`,
+      });
     }
 
-    const newFeedback = await Feedback.create({ user, reservation, hotel, content, rating });
+    const newFeedback = await Feedback.create({
+      user,
+      reservation,
+      hotel,
+      content,
+      rating,
+    });
 
     res.status(201).json({
       error: false,
@@ -376,14 +408,13 @@ exports.createFeedback = async (req, res) => {
   }
 };
 
-
 exports.getFeedbackById = async (req, res) => {
   try {
     const { feedbackId } = req.params;
 
     const feedback = await Feedback.findById(feedbackId)
-      .populate("user") 
-      .populate("hotel")             
+      .populate("user")
+      .populate("hotel")
       .populate("reservation");
 
     if (!feedback) {
