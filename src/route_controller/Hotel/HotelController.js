@@ -525,7 +525,39 @@ exports.changeStatusHotelInfo = asyncHandler(async (req, res) => {
     });
   }
 });
+// Top 5 hotels by location
+exports.getTop5HotelsByLocation = asyncHandler(async (req, res) => {
+  const { location } = req.query;
+  if (!location) {
+    return res.status(400).json({
+      error: true,
+      message: "Location is required",
+    });
+  }
 
+  // Find hotels by address matching the location
+  // Use regex to allow for partial matches and case-insensitive search
+  const hotels = await Hotel.find({
+    address: { $regex: location, $options: "i" },
+  })
+    .sort({ rating: -1 }) // Sort by rating in descending order
+    .limit(5)
+    .populate("services")
+    .populate("facilities");
+
+  if (!hotels || hotels.length === 0) {
+    return res.status(404).json({
+      error: true,
+      message: "No hotels found for this location",
+    });
+  }
+
+  return res.status(200).json({
+    error: false,
+    hotels,
+    message: "Get top 5 hotels by location success",
+  });
+});
 exports.createHotel= asyncHandler(async (req, res) => {
 
   const { hotelName, description, address, phoneNumber, email, services, facilities, rating, star, pricePerNight, images, businessDocuments, checkInStart, checkInEnd, checkOutStart, checkOutEnd } = req.body;

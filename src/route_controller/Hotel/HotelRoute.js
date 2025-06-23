@@ -52,4 +52,7 @@ HotelRouter.delete(
   checkOwner,
   HotelController.deleteHotelImages
 );
+
+HotelRouter.get("/get-top-hotel-location", HotelController.getTop5HotelsByLocation);
+
 module.exports = HotelRouter;
