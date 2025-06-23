@@ -86,19 +86,20 @@ async function seedUsers() {
     "https://i.pinimg.com/736x/85/9c/22/859c2298f64ef85e3b28d10b03f402bb.jpg",
     "https://i.pinimg.com/736x/4e/e1/d2/4ee1d24d87d37c5ddcab157af20d902e.jpg",
   ];
-  try {
-    // Xoá toàn bộ user
-    await mongoose.connection.dropDatabase();
 
-    // Danh sách user seed
-    const users = [
-      // 10 OWNER
+  try {
+    // Xoá toàn bộ database
+    await mongoose.connection.dropDatabase();
+    console.log("🗑️  Database dropped");
+
+    // Batch 1: Seed initial users với auto-generated _id
+    const initialUsers = [
       {
         name: "Khách Sạn One",
         email: "hot1@gm.com",
         password: "12345678",
         role: "OWNER",
-        phoneNumber: "0934726001",
+        phoneNumber: "0934726001", // Sửa từ phone thành phoneNumber
         address: "123 Trần Cao Vân, Đà Nẵng",
         isVerified: true,
         isLocked: false,
@@ -244,7 +245,7 @@ async function seedUsers() {
         },
       },
 
-      // 2 CUSTOMER (cuối danh sách)
+      // 5 CUSTOMER (cuối danh sách)
       {
         name: "Nguyễn Văn A",
         email: "cus1@gm.com",
@@ -337,48 +338,55 @@ async function seedUsers() {
       },
     ];
 
-    // Dùng new + save() để AutoIncrement hoạt động
-    for (const userData of users) {
-      console.log(`Seeding user: ${userData.password}`);
+    // Sử dụng new + save() để trigger middleware hash password
+    console.log("Creating initial users...");
+    for (const userData of initialUsers) {
       const user = new User(userData);
       await user.save();
       console.log(`✅ Created user ${user.name} with _id = ${user._id}`);
     }
 
-    const owners = [];
+    // Batch 2: Tạo thêm 37 owners với auto-generated _id
+    console.log("Creating additional owners...");
+    const additionalOwners = [];
 
     for (let i = 1; i <= 37; i++) {
       const randomAvatar = hotelImage[Math.floor(Math.random() * hotelImage.length)];
-      const hashedPassword = await bcrypt.hash("12345678", 10);
 
       const owner = {
-        _id: i + 16,
+        // Bỏ manual _id để MongoDB tự tạo
         email: `hot${i + 10}@gm.com`,
-        password: hashedPassword,
+        password: "12345678", // Để User model middleware tự hash
         name: `User Owner ${i + 16}`,
-        phone: `090${String(i).padStart(7, "0")}`, // Generate phone numbers
+        phoneNumber: `090${String(i).padStart(7, "0")}`, // Sửa từ phone thành phoneNumber
         role: "OWNER",
-        status: "ACTIVE",
+        // Bỏ status field nếu không có trong User model
         image: {
-          public_ID: "avatar_customer2",
+          public_ID: `avatar_owner_${i + 16}`,
           url: randomAvatar,
         },
         address: `Address ${i}, District ${Math.ceil(i / 5)}, Ho Chi Minh City`,
         dateOfBirth: new Date(1980 + (i % 20), i % 12, (i % 28) + 1),
         gender: i % 2 === 0 ? "MALE" : "FEMALE",
         isVerified: true,
+        isLocked: false,
+        cmnd: `04700301${String(i + 312).padStart(4, "0")}`, // Thêm CMND
       };
-      owners.push(owner);
+      additionalOwners.push(owner);
     }
 
-    // Insert all owners
-    const result = await User.insertMany(owners);
-    console.log(`Successfully created ${result.length} owners`);
+    // Sử dụng new + save() thay vì insertMany để trigger middleware
+    for (const ownerData of additionalOwners) {
+      const owner = new User(ownerData);
+      await owner.save();
+      console.log(`✅ Created owner ${owner.name} with _id = ${owner._id}`);
+    }
 
-    console.log("✅ Seed completed!");
+    console.log("✅ Seed completed successfully!");
     process.exit();
   } catch (error) {
     console.error("❌ Error seeding data:", error);
+    console.error("Error details:", error.message);
     process.exit(1);
   }
 }

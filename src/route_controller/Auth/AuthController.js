@@ -18,10 +18,9 @@ exports.loginCustomer = async (req, res) => {
     }
 
     // Nếu không có role
-    if (!user.role)  {
+    if (!user.role) {
       return res.status(401).json({ MsgNo: "Email or password is incorrect" });
     }
-
 
     // So sánh mật khẩu
     const isMatch = await bcrypt.compare(password, user.password);
@@ -42,7 +41,6 @@ exports.loginCustomer = async (req, res) => {
         user: user,
       },
     });
-
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ MsgNo: "Internal server error" });
@@ -53,7 +51,7 @@ exports.loginOwner = async (req, res) => {
   const { email, password } = req.body;
   console.log("body: ", req.body);
   console.log("email: ", email);
-  const user = await User.findOne({ email }).select("+password");
+  const user = await User.findOne({ email }).populate('ownedHotels').select("+password");
 
   if (!user) {
     return res.status(401).json({ MsgNo: "Email or password is incorrect" });
@@ -80,7 +78,8 @@ exports.loginOwner = async (req, res) => {
 exports.updateCustomerProfile = async (req, res) => {
   try {
     const userId = req.user._id;
-    const { name, phoneNumber, address, gender, birthDate, image, cmnd } = req.body;
+    const { name, phoneNumber, address, gender, birthDate, image, cmnd } =
+      req.body;
 
     const user = await User.findById(userId);
 
@@ -222,14 +221,19 @@ exports.forgotPassword = async (req, res) => {
   console.log("Forgot password request body:", req.body);
   try {
     const { email } = req.body;
-    console.log("Forgot password request for email:", email);   
+    console.log("Forgot password request for email:", email);
     if (!email) {
       return res.status(400).json({ MsgNo: "Email is required" });
     }
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ MsgNo: "Email is not registered with us! Try again with another email" });
+      return res
+        .status(404)
+        .json({
+          MsgNo:
+            "Email is not registered with us! Try again with another email",
+        });
     }
 
     // Generate reset token and expiry (6-digit code, valid for 1 hour)
@@ -266,12 +270,11 @@ exports.forgotPassword = async (req, res) => {
  */
 exports.resetPassword = async (req, res) => {
   try {
-    const { email,code, newPassword, confirmPassword } = req.body;
-    console.log("req.body: ", req.body)
-    if (!email ||!code || !newPassword || !confirmPassword) {
+    const { email, code, newPassword, confirmPassword } = req.body;
+    console.log("req.body: ", req.body);
+    if (!email || !code || !newPassword || !confirmPassword) {
       return res.status(400).json({ MsgNo: "All fields are required" });
     }
-
 
     const user = await User.findOne({
       email,
@@ -279,7 +282,9 @@ exports.resetPassword = async (req, res) => {
       verificationTokenExpiresAt: { $gt: new Date() },
     }).select("+password");
     if (!user) {
-      return res.status(400).json({ MsgNo: "Invalid or expired verification code" });
+      return res
+        .status(400)
+        .json({ MsgNo: "Invalid or expired verification code" });
     }
     user.password = newPassword;
     user.verificationToken = undefined;
@@ -313,12 +318,11 @@ exports.verifyForgotPassword = async (req, res) => {
     res.json({
       MsgNo: "Verification successful. You can now reset your password.",
     });
-  }
-  catch (error) {
+  } catch (error) {
     console.error("Verification error:", error);
     res.status(500).json({ MsgNo: "Internal server error" });
   }
-}
+};
 
 /**
  * Verify email using the verification code
@@ -350,7 +354,7 @@ exports.verifyEmail = async (req, res) => {
       MsgNo: "Email verified successfully. You can now log in.",
       Data: {
         user: {
-          _id: user._id,  
+          _id: user._id,
           name: user.name,
           email: user.email,
           phoneNumber: user.phoneNumber,
@@ -382,7 +386,7 @@ exports.resendVerificationCode = async (req, res) => {
     if (!user) {
       return res.status(404).json({ MsgNo: "User not found" });
     }
-    
+
     // Generate new verification code
     const verificationToken = generateVerificationToken();
     const verificationTokenExpiresAt = new Date(

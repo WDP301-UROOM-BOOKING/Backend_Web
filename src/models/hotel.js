@@ -23,7 +23,7 @@ const hotelSchema = new Schema(
     phoneNumber: {
       type: String,
       required: true,
-      default: "0905123456"
+      default: "0905123456",
     },
     email: {
       type: String,
@@ -55,53 +55,59 @@ const hotelSchema = new Schema(
       required: true,
     },
     images: [
-      { type: String, required: true },
+      {
+        public_ID: {
+          type: String,
+          default: "avatar_default",
+        },
+        url: {
+          type: String,
+          default:
+            "https://i.pinimg.com/736x/8f/1c/a2/8f1ca2029e2efceebd22fa05cca423d7.jpg",
+        },
+      },
     ],
     businessDocuments: [
       {
         title: { type: String, required: true },
-        url: { type: String, required: true }
-      }
+        url: { type: String, required: true },
+      },
     ],
     adminStatus: {
       type: String,
       enum: ["PENDING", "APPROVED"],
-      default: "PENDING"
+      default: "PENDING",
     },
     ownerStatus: {
       type: String,
       enum: ["ACTIVE", "NONACTIVE"],
-      default: "NONACTIVE"
+      default: "NONACTIVE",
     },
     requestDate: {
       type: Date,
-      default: Date.now
+      default: Date.now,
     },
     decisionDate: {
-      type: Date
+      type: Date,
     },
     checkInStart: {
       type: String,
-      default: "12:00"
+      default: "12:00",
     },
     checkInEnd: {
       type: String,
-      default: "13:00"
+      default: "13:00",
     },
     checkOutStart: {
       type: String,
-      default: "10:00"
+      default: "10:00",
     },
     checkOutEnd: {
       type: String,
-      default: "11:00"
+      default: "11:00",
     },
   },
   { versionKey: false }
 );
-
-
-
-
 
 module.exports = mongoose.model("Hotel", hotelSchema);
