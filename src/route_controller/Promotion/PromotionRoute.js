@@ -9,6 +9,10 @@ const checkAdmin = require('../../middlewares/checkAdmin');
 
 // // Get all promotions (Admin or Customer)
 // router.get('/', promotionController.getAllPromotions);
+//Test 
+router.get('/test', (req, res) => {
+  res.json({ message: 'Promotion route is working!' });
+});
 
 // // Get single promotion by ID (Admin or Customer)
 // router.get('/:id', promotionController.getPromotionById);
@@ -19,7 +23,7 @@ const checkAdmin = require('../../middlewares/checkAdmin');
 // // Delete promotion (Admin only)
 // router.delete('/:id', checkAdmin, promotionController.deletePromotion);
 
-// // Apply promotion (Customer only)
-// router.post('/apply/code', checkCustomer, promotionController.applyPromotionCode);
+// Apply promotion (Customer only)
+router.post('/apply', promotionController.applyPromotionCode);
 
 module.exports = router;
