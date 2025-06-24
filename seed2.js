@@ -864,7 +864,10 @@ for (let i = 0; i < 60; i++) {
   for (let k = 0; k < numImages; k++) {
     let hotelImageUrl =
       hotelImage[Math.floor(Math.random() * hotelImage.length)];
-    images.push(hotelImageUrl);
+    images.push({
+      public_ID: `hotel_image_${Date.now()}_${k}`, // Tạo public_ID unique
+      url: hotelImageUrl,
+    });
   } // **🛑 Kiểm tra khách sạn có bị trùng không trước khi insert**
 
   let existingHotel = db.hotels.findOne({
@@ -875,7 +878,7 @@ for (let i = 0; i < 60; i++) {
   if (!existingHotel) {
     let hotel = db.hotels.insertOne({
       hotelName: hotelNames[i],
-      owner: i >= 11 ? 0 : i + 1,
+      owner: i >= 53 ? 0 : i + 1,
       description: hotelDescriptions[randomIndex],
       address: hotelAddresses[i],
       adminStatus: "APPROVED",
@@ -955,7 +958,10 @@ for (let i = 0; i < hotelNames.length; i++) {
   for (let k = 0; k < numImages; k++) {
     let hotelImageUrl =
       hotelImage[Math.floor(Math.random() * hotelImage.length)];
-    images.push(hotelImageUrl);
+    images.push({
+      public_ID: `hotel_image_${Date.now()}_${k}`, // Tạo public_ID unique
+      url: hotelImageUrl,
+    });
   } // **🛑 Kiểm tra khách sạn có bị trùng không trước khi insert**
 
   let existingHotel = db.hotels.findOne({
@@ -966,7 +972,7 @@ for (let i = 0; i < hotelNames.length; i++) {
   if (!existingHotel) {
     let hotel = db.hotels.insertOne({
       hotelName: hotelNames[i],
-      owner: i >= 11 ? 0 : i + 1,
+      owner: i >= 53 ? 0 : i + 1,
       description: hotelDescriptions[randomIndex],
       address: hotelAddresses[i],
       adminStatus: "APPROVED",
@@ -1042,7 +1048,7 @@ const reservationStatuses = [
   // "NOT PAID", // Chưa trả tiền
 ];
 
-for (let i = 0; i < 1000; i++) {
+for (let i = 0; i < 500; i++) {
   let randomStatus =
     reservationStatuses[Math.floor(Math.random() * reservationStatuses.length)];
 
@@ -1190,27 +1196,30 @@ db.users.updateOne(
 
 // Notification seed data
 const notificationTypes = [
-  'NEW_MESSAGE',
-  'BOOKING_CONFIRMED',
-  'BOOKING_CANCELLED',
+  "NEW_MESSAGE",
+  "BOOKING_CONFIRMED",
+  "BOOKING_CANCELLED",
   // 'BOOKING_UPDATED',
-  'PAYMENT_SUCCESS',
-  'REFUND_PROCESSED',
+  "PAYMENT_SUCCESS",
+  "REFUND_PROCESSED",
   // 'REFUND_APPROVED',
   // 'REFUND_REJECTED',
   // 'CHECK_IN_REMINDER',
   // 'CHECK_OUT_REMINDER',
-  'PROMOTION_AVAILABLE',
+  "PROMOTION_AVAILABLE",
   // 'SYSTEM_ANNOUNCEMENT'
 ];
 
-const priorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+const priorities = ["LOW", "MEDIUM", "HIGH", "URGENT"];
 
 // Function to get random date within last 30 days
 function getRandomNotificationDate() {
   const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
-  return new Date(thirtyDaysAgo.getTime() + Math.random() * (now.getTime() - thirtyDaysAgo.getTime()));
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  return new Date(
+    thirtyDaysAgo.getTime() +
+      Math.random() * (now.getTime() - thirtyDaysAgo.getTime())
+  );
 }
 
 // Insert Notifications
@@ -1220,32 +1229,34 @@ const notificationData = [];
 
 // Create 100 notifications for testing
 for (let i = 0; i < 100; i++) {
-  const randomType = notificationTypes[Math.floor(Math.random() * notificationTypes.length)];
+  const randomType =
+    notificationTypes[Math.floor(Math.random() * notificationTypes.length)];
   const randomUserId = Math.floor(Math.random() * 5) + 11;
-  const randomPriority = priorities[Math.floor(Math.random() * priorities.length)];
+  const randomPriority =
+    priorities[Math.floor(Math.random() * priorities.length)];
   const isRead = Math.random() > 0.3; // 70% chance to be read
   const createdAt = getRandomNotificationDate();
-  
-  let title = '';
-  let message = '';
+
+  let title = "";
+  let message = "";
   let data = {
-    additionalData: {}
+    additionalData: {},
   };
 
   // Set title and message based on type
   switch (randomType) {
-    case 'NEW_MESSAGE':
-      title = 'New Message';
-      message = 'You have a new message from hotel staff';
+    case "NEW_MESSAGE":
+      title = "New Message";
+      message = "You have a new message from hotel staff";
       // data.additionalData = {
       //   senderName: 'Hotel Manager',
       //   messagePreview: 'Thank you for your inquiry...'
       // };
       break;
 
-    case 'BOOKING_CONFIRMED':
-      title = 'Booking Confirmed';
-      message = 'Your hotel booking has been confirmed successfully';
+    case "BOOKING_CONFIRMED":
+      title = "Booking Confirmed";
+      message = "Your hotel booking has been confirmed successfully";
       // data.additionalData = {
       //   hotelName: hotelNames[Math.floor(Math.random() * hotelNames.length)],
       //   checkInDate: new Date(Date.now() + Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -1253,18 +1264,18 @@ for (let i = 0; i < 100; i++) {
       // };
       break;
 
-    case 'BOOKING_CANCELLED':
-      title = 'Booking Cancelled';
-      message = 'Your booking has been cancelled';
+    case "BOOKING_CANCELLED":
+      title = "Booking Cancelled";
+      message = "Your booking has been cancelled";
       // data.additionalData = {
       //   hotelName: hotelNames[Math.floor(Math.random() * hotelNames.length)],
       //   reason: 'Customer request'
       // };
       break;
 
-    case 'PAYMENT_SUCCESS':
-      title = 'Payment Successful';
-      message = 'Your payment has been processed successfully';
+    case "PAYMENT_SUCCESS":
+      title = "Payment Successful";
+      message = "Your payment has been processed successfully";
       // data.additionalData = {
       //   amount: Math.floor(Math.random() * 5000000) + 500000,
       //   hotelName: hotelNames[Math.floor(Math.random() * hotelNames.length)],
@@ -1272,18 +1283,18 @@ for (let i = 0; i < 100; i++) {
       // };
       break;
 
-    case 'REFUND_PROCESSED':
-      title = 'Refund Processed';
-      message = 'Your refund has been processed successfully';
+    case "REFUND_PROCESSED":
+      title = "Refund Processed";
+      message = "Your refund has been processed successfully";
       // data.refundAmount = Math.floor(Math.random() * 3000000) + 200000;
       // data.additionalData = {
       //   hotelName: hotelNames[Math.floor(Math.random() * hotelNames.length)]
       // };
       break;
 
-    case 'PROMOTION_AVAILABLE':
-      title = 'New Promotion Available';
-      message = 'Special discount available for your next booking';
+    case "PROMOTION_AVAILABLE":
+      title = "New Promotion Available";
+      message = "Special discount available for your next booking";
       // data.additionalData = {
       //   promotionName: 'Summer Sale',
       //   discountValue: [10, 15, 20, 25, 30][Math.floor(Math.random() * 5)],
@@ -1292,8 +1303,8 @@ for (let i = 0; i < 100; i++) {
       break;
 
     default:
-      title = 'Notification';
-      message = 'You have a new notification';
+      title = "Notification";
+      message = "You have a new notification";
       break;
   }
 
@@ -1308,12 +1319,14 @@ for (let i = 0; i < 100; i++) {
     priority: randomPriority,
     createdAt: createdAt,
     updatedAt: createdAt,
-    expiresAt: new Date(createdAt.getTime() + (30 * 24 * 60 * 60 * 1000))
+    expiresAt: new Date(createdAt.getTime() + 30 * 24 * 60 * 60 * 1000),
   };
 
   // Add readAt if notification is read
   if (isRead) {
-    notificationDoc.readAt = new Date(createdAt.getTime() + Math.random() * (24 * 60 * 60 * 1000));
+    notificationDoc.readAt = new Date(
+      createdAt.getTime() + Math.random() * (24 * 60 * 60 * 1000)
+    );
   }
 
   notificationData.push(notificationDoc);
@@ -1322,31 +1335,34 @@ for (let i = 0; i < 100; i++) {
 // Insert all notifications at once
 try {
   const notificationResult = db.notifications.insertMany(notificationData);
-  print(`✅ Successfully inserted ${notificationResult.insertedIds.length} notifications`);
-  
-  // Print statistics
-  const notificationStats = db.notifications.aggregate([
-    {
-      $group: {
-        _id: '$type',
-        count: { $sum: 1 },
-        unreadCount: {
-          $sum: { $cond: [{ $eq: ['$isRead', false] }, 1, 0] }
-        }
-      }
-    },
-    { $sort: { count: -1 } }
-  ]).toArray();
+  print(
+    `✅ Successfully inserted ${notificationResult.insertedIds.length} notifications`
+  );
 
-  print('📊 Notification Statistics:');
-  notificationStats.forEach(stat => {
+  // Print statistics
+  const notificationStats = db.notifications
+    .aggregate([
+      {
+        $group: {
+          _id: "$type",
+          count: { $sum: 1 },
+          unreadCount: {
+            $sum: { $cond: [{ $eq: ["$isRead", false] }, 1, 0] },
+          },
+        },
+      },
+      { $sort: { count: -1 } },
+    ])
+    .toArray();
+
+  print("📊 Notification Statistics:");
+  notificationStats.forEach((stat) => {
     print(`- ${stat._id}: ${stat.count} total (${stat.unreadCount} unread)`);
   });
 
   const totalUnread = db.notifications.countDocuments({ isRead: false });
   const totalRead = db.notifications.countDocuments({ isRead: true });
   print(`📈 Overall: ${totalRead} read, ${totalUnread} unread`);
-
 } catch (error) {
   print(`❌ Error inserting notifications: ${error}`);
 }

@@ -41,7 +41,8 @@ exports.getReservationById = async (req, res) => {
 
     const reservation = await Reservation.findById(reservationId)
       .populate("hotel")
-      .populate("rooms.room");
+      .populate("rooms.room")
+      .populate("services.service")
 
     if (!reservation) {
       return res.status(404).json({

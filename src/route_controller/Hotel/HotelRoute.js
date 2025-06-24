@@ -4,6 +4,7 @@ const HotelController = require("./HotelController");
 const checkCustomer = require("../../middlewares/checkCustomer");
 const checkGuest = require("../../middlewares/cheskGuest");
 const checkOwner = require("../../middlewares/checkOwner");
+const upload = require('../../middlewares/uploadMiddleware');
 
 HotelRouter.get("/get-all-hotel", HotelController.getAllHotels);
 HotelRouter.post("/get-hotel-byId", HotelController.getHotelsByIds);
@@ -37,5 +38,21 @@ HotelRouter.put("/updateStatusService/:hotelId/status",  HotelController.updateH
 HotelRouter.post("/add-service", HotelController.createHotelService);
 HotelRouter.put("/changeStatus-hotel/:hotelId",checkOwner,  HotelController.changeStatusHotelInfo);
 HotelRouter.post("/create-hotel",checkOwner, HotelController.createHotel);
+
+HotelRouter.post(
+  '/upload_images', 
+  checkOwner, 
+  upload.array('images', 5), // Accept exactly 5 files with field name 'images'
+  HotelController.uploadHotelImages
+);
+
+// Delete hotel images
+HotelRouter.delete(
+  '/delete_images',
+  checkOwner,
+  HotelController.deleteHotelImages
+);
+
 HotelRouter.get("/get-top-hotel-location", HotelController.getTop5HotelsByLocation);
+
 module.exports = HotelRouter;

@@ -7,35 +7,8 @@ const Reservation = require("../../models/reservation");
 const HotelFacility = require("../../models/hotelFacility"); 
 const HotelService = require("../../models/hotelService");
 const hotelFacility = require("../../models/hotelFacility");
-// exports.getAllHotels = asyncHandler(async (req, res) => {
-//     const {page= 1, limit= 5}= req.query;
+const cloudinary = require("../../config/cloudinaryConfig"); // Đảm bảo path đúng
 
-//     const query = {};
-
-//     // 📄 Pagination
-//     const pageNum = parseInt(page);
-//     const limitNum = parseInt(limit);
-//     const skip = (pageNum - 1) * limitNum;
-
-//     const hotels = await Hotel.find()
-//         .skip(skip)
-//         .limit(limitNum)
-//         .populate("services")
-//         .populate("facilities");
-
-//   if (hotels.length === 0) {
-//     return res.status(404).json({
-//       error: true,
-//       message: "No hotels found",
-//     });
-//   }
-
-//   return res.status(200).json({
-//     error: false,
-//     hotels,
-//     message: "Get all hotels success",
-//   });
-// });
 
 exports.getAllHotels = asyncHandler(async (req, res) => {
   const hotels = await Hotel.find().populate("services").populate("facilities");
@@ -640,6 +613,195 @@ exports.createHotel= asyncHandler(async (req, res) => {
     return res.status(500).json({
       error: true,
       message: "Failed to create hotel",
+    });
+  }
+});
+
+
+// Upload multiple hotel images
+exports.uploadHotelImages = asyncHandler(async (req, res) => {
+  try {
+    console.log("=== UPLOAD IMAGES DEBUG ===");
+    console.log("Files received:", req.files ? req.files.length : 0);
+    console.log("Cloudinary object:", typeof cloudinary);
+    console.log("Cloudinary uploader:", typeof cloudinary.uploader);
+    
+    // Debug cloudinary object
+    if (!cloudinary || !cloudinary.uploader) {
+      console.error("❌ Cloudinary not properly configured!");
+      return res.status(500).json({
+        error: true,
+        message: "Cloudinary configuration error"
+      });
+    }
+
+    // Check if files are provided
+    if (!req.files || req.files.length === 0) {
+      console.log("No files provided");
+      return res.status(400).json({
+        error: true,
+        message: "Vui lòng chọn ít nhất 1 ảnh"
+      });
+    }
+
+    // Check if exactly 5 images
+    // if (req.files.length !== 5) {
+    //   console.log(`Wrong number of files: ${req.files.length}/5`);
+    //   return res.status(400).json({
+    //     error: true,
+    //     message: `Vui lòng upload đúng 5 ảnh (hiện tại: ${req.files.length}/5)`
+    //   });
+    // }
+
+    const uploadedImages = [];
+    const errors = [];
+
+    console.log("Starting upload to Cloudinary...");
+
+    // Upload each image to Cloudinary
+    for (let i = 0; i < req.files.length; i++) {
+      const file = req.files[i];
+      
+      try {
+        console.log(`Uploading image ${i + 1}:`, {
+          originalname: file.originalname,
+          mimetype: file.mimetype,
+          size: file.size
+        });
+
+        // Convert buffer to base64
+        const fileBuffer = file.buffer;
+        const fileBase64 = `data:${file.mimetype};base64,${fileBuffer.toString('base64')}`;
+
+        // Upload to Cloudinary với error handling
+        console.log(`Calling cloudinary.uploader.upload for image ${i + 1}...`);
+        const result = await cloudinary.uploader.upload(fileBase64, {
+          folder: 'hotel_images',
+          public_id: `hotel_${Date.now()}_${i + 1}`,
+          transformation: [
+            { width: 1200, height: 800, crop: 'fill', quality: 'auto' },
+            { flags: 'progressive' }
+          ]
+        });
+
+        console.log(`✅ Image ${i + 1} uploaded successfully:`, result.public_id);
+
+        uploadedImages.push({
+          public_ID: result.public_id,
+          url: result.secure_url,
+          width: result.width,
+          height: result.height,
+          format: result.format,
+          bytes: result.bytes
+        });
+
+      } catch (uploadError) {
+        console.error(`❌ Error uploading image ${i + 1}:`, uploadError);
+        errors.push(`Lỗi upload ảnh ${i + 1}: ${uploadError.message}`);
+      }
+    }
+
+    // Check if all uploads were successful
+    // if (uploadedImages.length !== 5) {
+    //   console.log("Some uploads failed, cleaning up...");
+    //   // Delete successfully uploaded images if not all succeeded
+    //   for (const image of uploadedImages) {
+    //     try {
+    //       await cloudinary.uploader.destroy(image.public_ID);
+    //       console.log(`🧹 Cleaned up image: ${image.public_ID}`);
+    //     } catch (deleteError) {
+    //       console.error('Error deleting image:', deleteError);
+    //     }
+    //   }
+
+    //   return res.status(500).json({
+    //     error: true,
+    //     message: "Có lỗi xảy ra khi upload ảnh",
+    //     errors: errors
+    //   });
+    // }
+
+    console.log("🎉 All images uploaded successfully!");
+    console.log("=== END UPLOAD DEBUG ===");
+
+    res.status(200).json({
+      error: false,
+      message: "Upload 5 ảnh thành công!",
+      data: {
+        images: uploadedImages,
+        totalImages: uploadedImages.length
+      }
+    });
+
+  } catch (error) {
+    console.error("❌ Error uploading hotel images:", error);
+    res.status(500).json({
+      error: true,
+      message: "Internal server error",
+      details: error.message
+    });
+  }
+});
+
+// Delete hotel images
+exports.deleteHotelImages = asyncHandler(async (req, res) => {
+  try {
+    console.log("=== DELETE IMAGES DEBUG ===");
+    console.log("Request body:", req.body);
+    
+    const { imageIds } = req.body; // Array of public_IDs
+
+    if (!imageIds || !Array.isArray(imageIds) || imageIds.length === 0) {
+      console.log("No imageIds provided");
+      return res.status(400).json({
+        error: true,
+        message: "Vui lòng cung cấp danh sách ID ảnh cần xóa"
+      });
+    }
+
+    console.log("Images to delete:", imageIds);
+
+    const deletedImages = [];
+    const errors = [];
+
+    // Delete each image from Cloudinary
+    for (const imageId of imageIds) {
+      try {
+        console.log(`Deleting image: ${imageId}`);
+        const result = await cloudinary.uploader.destroy(imageId);
+        
+        console.log(`Delete result for ${imageId}:`, result);
+        
+        if (result.result === 'ok') {
+          deletedImages.push(imageId);
+        } else {
+          errors.push(`Không thể xóa ảnh ${imageId}: ${result.result}`);
+        }
+      } catch (deleteError) {
+        console.error(`Error deleting image ${imageId}:`, deleteError);
+        errors.push(`Lỗi xóa ảnh ${imageId}: ${deleteError.message}`);
+      }
+    }
+
+    console.log("Deleted images:", deletedImages);
+    console.log("Errors:", errors);
+    console.log("=== END DELETE DEBUG ===");
+
+    res.status(200).json({
+      error: false,
+      message: `Đã xóa ${deletedImages.length}/${imageIds.length} ảnh`,
+      data: {
+        deletedImages,
+        errors: errors.length > 0 ? errors : null
+      }
+    });
+
+  } catch (error) {
+    console.error("Error deleting hotel images:", error);
+    res.status(500).json({
+      error: true,
+      message: "Internal server error",
+      details: error.message
     });
   }
 });
