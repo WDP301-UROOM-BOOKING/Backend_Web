@@ -15,7 +15,7 @@ const RoomSchema = new Schema(
     bed: [
       {
         _id: false,
-        bed: { type: Schema.Types.ObjectId, ref: 'Bed', required: true },
+        bed: { type: Schema.Types.Number, ref: 'Bed', required: true },
         quantity: { type: Number, required: true },
       },
     ],

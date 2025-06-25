@@ -208,7 +208,10 @@ exports.getHotelDetails = asyncHandler(async (req, res) => {
 
   const hotel = await Hotel.findById(hotelId)
     .populate("owner")
-    .populate("services")
+    .populate({
+      path: "services",
+      match: { statusActive: "ACTIVE" }
+    })
     .populate("facilities");
 
   if (!hotel) {
@@ -403,7 +406,6 @@ exports.updateHotelInfo = asyncHandler(async (req, res) => {
   }
 });
 exports.updateHotelServiceStatus = async (req, res) => {
-  console.log('1')
   try {
     const { hotelId } = req.params;
     const { serviceId, statusActive } = req.body;
@@ -451,14 +453,14 @@ exports.createHotelService = async (req, res) => {
   try {
     const { hotelId, name, description, type, price } = req.body;
     let { statusActive } = req.body;
-
+    console.log("body: ", req.body)
     if (!hotelId) {
       return res.status(400).json({ message: "Thiếu hotelId" });
     }
 
 
     if (!statusActive) {
-      statusActive = "ACTIVE";
+      statusActive = "NONACTIVE";
     }
 
     const newService = await HotelService.create({
@@ -467,7 +469,6 @@ exports.createHotelService = async (req, res) => {
       description,
       type,
       price,
-      statusActive,
     });
 
   
