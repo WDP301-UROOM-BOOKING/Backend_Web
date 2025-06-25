@@ -58,16 +58,28 @@ const promotionSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-    },
+    // createdBy: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: 'User',
+    //   required: true,
+    // },
   },
   { 
     versionKey: false,
     timestamps: true 
   }
 );
-
+promotionSchema.pre("save", function (next) {
+  if (this.startDate >= this.endDate) {
+    return next(new Error("Start date must be before end date."));
+  }
+  next();
+});
+promotionSchema.methods.isValid = function () {
+  const now = new Date();
+  return this.isActive &&
+    now >= this.startDate &&
+    now <= this.endDate &&
+    (this.usageLimit === null || this.usedCount < this.usageLimit);
+};
 module.exports = mongoose.model("Promotion", promotionSchema);

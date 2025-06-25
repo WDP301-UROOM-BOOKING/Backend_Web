@@ -10,6 +10,7 @@ const authRoute = require("./src/route_controller/Auth/AuthRoute");
 const SearchHotelRoute = require("./src/route_controller/Search_Hotel/SearchHotelRoute");
 const HotelRouter = require("./src/route_controller/Hotel/HotelRoute");
 const FeedbackRouter = require("./src/route_controller/Feedback/FeedbackRoute");
+const promotionRoutes = require('./src/route_controller/Promotion/PromotionRoute');
 const RoomRouter = require("./src/route_controller/Room/RoomRouter");
 const PaymentRouter = require("./src/route_controller/Payment/PaymentRoute");
 const ReportedFeedbackRoute = require("./src/route_controller/ReportedFeedback/ReportedFeedbackRoute");
@@ -90,6 +91,7 @@ app.use("/api/reportFeedback", ReportedFeedbackRoute);
 
 app.use("/api/refunding_reservation", RefundingReservationRouter);
 app.use("/api/hotelservices", HotelServiceRoute);
+app.use('/api/promotions', promotionRoutes);
 
 app.use("/api/chat", ChatRoutes);
 app.use("/api/monthly-payment", MonthlyPaymentRoute);
