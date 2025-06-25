@@ -4,6 +4,7 @@ const checkCustomer = require("../../middlewares/checkCustomer");
 const checkRole = require("../../middlewares/checkRole");
 const upload = require("../../middlewares/uploadMiddleware");
 const authRouter = express.Router();
+const checkAdmin = require("../../middlewares/checkAdmin");
 
 // Registration and verification routes
 authRouter.post("/register_customer", AuthController.registerCustomer);
@@ -37,5 +38,11 @@ authRouter.put(
 //hotel host
 authRouter.post("/login_owner", AuthController.loginOwner);
 authRouter.post("/register_owner", AuthController.registerOwner);
+
+// Thêm route lấy tất cả khách hàng cho admin
+authRouter.get("/all-customers", checkAdmin.isAdmin, AuthController.getAllCustomers);
+
+authRouter.put("/lock-customer/:id", checkAdmin.isAdmin, AuthController.lockCustomer);
+authRouter.put("/unlock-customer/:id", checkAdmin.isAdmin, AuthController.unlockCustomer);
 
 module.exports = authRouter;

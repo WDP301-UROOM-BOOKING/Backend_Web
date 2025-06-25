@@ -478,7 +478,8 @@ exports.getReservations = asyncHandler(async (req, res) => {
       .sort({ createdAt: sort === "asc" ? 1 : -1 })
       .populate("hotel")
       .populate("user")
-      .populate("rooms.room");
+      .populate("rooms.room")
+      .populate("services.service");
     console.log("re: ", reservations);
     res.json({ error: false, reservations });
   } catch (err) {
