@@ -9,7 +9,7 @@ const mongoose = require("mongoose");
 exports.updateHotelService = async (req, res) => {
   try {
     const { serviceId } = req.params;
-
+    console.log("Service ID:", serviceId);
     if (!mongoose.Types.ObjectId.isValid(serviceId)) {
       return res.status(400).json({ message: "ID không hợp lệ" });
     }

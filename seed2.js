@@ -651,22 +651,26 @@ const roomFacilityIds = [];
 // Danh sách loại giường cố định
 const bedTypes = [
   {
+    _id: 1,
     name: "Single Bed",
     description: "A single bed suitable for one person. Width: 90 - 130 cm.",
     bedWidth: "Width 90 - 130 cm",
   },
   {
+    _id: 2,
     name: "Double Bed",
     description: "A double bed ideal for two people. Width: 131 - 150 cm.",
     bedWidth: "Width 131 - 150 cm",
   },
   {
+    _id: 3,
     name: "King Bed",
     description:
       "A king-size bed for extra comfort, suitable for two or more people. Width: 151 - 180 cm.",
     bedWidth: "Width 151 - 180 cm",
   },
-  {
+  { 
+    _id: 4,
     name: "Super King Beds",
     description:
       "Room with two large single beds, suitable for two people. Total width: 181 - 210 cm.",
@@ -676,7 +680,7 @@ const bedTypes = [
 
 // Insert Beds
 const bedDocs = db.beds.insertMany(bedTypes);
-const bedIds = Object.values(bedDocs.insertedIds);
+const bedIds = [1,2,3,4];
 
 // Danh sách facility có sẵn
 const facilitiesName = [
@@ -984,7 +988,7 @@ for (let i = 0; i < hotelNames.length; i++) {
       star: Math.floor(Math.random() * 5) + 1, // 2-5 sao
       rating: Math.floor(Math.random() * 5) + 1, // 1-5 rating
       pricePerNight:
-        Math.floor(Math.random() * ((2000 - 500) / 10 + 1)) * 10 + 500, // 5000 - 2000
+      Math.floor(Math.random() * ((2000 - 500) / 10 + 1)) * 10 + 500, // 5000 - 2000
       images: images,
       checkInStart: "12:00",
       checkInEnd: "13:00",
@@ -1024,7 +1028,7 @@ for (let i = 0; i < 20; i++) {
       price: Math.floor(Math.random() * ((1000 - 100) / 10 + 1)) * 10 + 100,
       capacity: Math.floor(Math.random() * 4) + 1,
       description:
-        roomDescriptions[Math.floor(Math.random() * roomDescriptions.length)],
+      roomDescriptions[Math.floor(Math.random() * roomDescriptions.length)],
       images: images,
       quantity: Math.floor(Math.random() * 10) + 1,
       hotel: hotelIds[i % hotelIds.length],
@@ -1048,7 +1052,7 @@ const reservationStatuses = [
   // "NOT PAID", // Chưa trả tiền
 ];
 
-for (let i = 0; i < 500; i++) {
+for (let i = 0; i < 1000; i++) {
   let randomStatus =
     reservationStatuses[Math.floor(Math.random() * reservationStatuses.length)];
 
