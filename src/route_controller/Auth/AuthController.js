@@ -6,6 +6,7 @@ const generateVerificationToken = require("../../utils/generateVerificationToken
 const sendEmail = require("../../utils/sendEmail");
 const { emailVerificationTemplate } = require("../../utils/emailTemplates");
 const admin = require("../../config/firebaseAdminConfig").default;
+const Reservation = require("../../models/reservation");
 
 exports.loginCustomer = async (req, res) => {
   try {
@@ -560,5 +561,84 @@ exports.registerOwner = async (req, res) => {
   } catch (error) {
     console.error("Registration error:", error);
     res.status(500).json({ MsgNo: "Internal server error" });
+  }
+};
+
+/**
+ * Lấy tất cả khách hàng (role CUSTOMER) cho admin
+ */
+exports.getAllCustomers = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const User = require("../../models/user");
+    const query = { role: "CUSTOMER" };
+    if (req.query.status) query.status = req.query.status;
+    if (req.query.search) {
+      const searchRegex = new RegExp(req.query.search, "i");
+      query.$or = [
+        { name: searchRegex },
+        { email: searchRegex },
+        { phoneNumber: searchRegex }
+      ];
+    }
+    // Sắp xếp
+    let sort = {};
+    if (req.query.sort === 'name') sort = { name: 1 };
+    if (req.query.sort === 'createdAt') sort = { createdAt: -1 };
+    // Lấy danh sách user
+    const [customers, total] = await Promise.all([
+      User.find(query).sort(sort).skip(skip).limit(limit),
+      User.countDocuments(query)
+    ]);
+    // Đếm số booking thực sự cho từng user
+    const bookingStatuses = ["BOOKED", "CHECKED IN", "CHECKED OUT", "COMPLETED"];
+    let customersWithBookingCount = await Promise.all(customers.map(async (user) => {
+      const bookingCount = await Reservation.countDocuments({ user: user._id, status: { $in: bookingStatuses } });
+      return { ...user.toObject(), bookingCount };
+    }));
+    // Sắp xếp lại theo bookingCount nếu cần
+    if (req.query.sort === 'bookingCount') {
+      customersWithBookingCount = customersWithBookingCount.sort((a, b) => b.bookingCount - a.bookingCount);
+    }
+    res.json({
+      success: true,
+      data: customersWithBookingCount,
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.lockCustomer = async (req, res) => {
+  try {
+    const user = await require("../../models/user").findByIdAndUpdate(
+      req.params.id,
+      { isLocked: true, status: "LOCK" },
+      { new: true }
+    );
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    res.json({ success: true, data: user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.unlockCustomer = async (req, res) => {
+  try {
+    const user = await require("../../models/user").findByIdAndUpdate(
+      req.params.id,
+      { isLocked: false, status: "ACTIVE" },
+      { new: true }
+    );
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    res.json({ success: true, data: user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
