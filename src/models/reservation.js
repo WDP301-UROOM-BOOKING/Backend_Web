@@ -72,6 +72,19 @@ const reservationSchema = new Schema(
       required: true,
       default: 0,
     },
+    finalPrice: {
+      type: Number,
+      default: 0,
+    },
+    promotionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Promotion",
+      default: null,
+    },
+    promotionDiscount: {
+      type: Number,
+      default: 0,
+    },
     createdAt: { type: Date, default: Date.now },
   },
   { timestamps: true, versionKey: false }

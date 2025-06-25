@@ -24,6 +24,9 @@ exports.createBooking = asyncHandler(async (req, res) => {
     roomDetails,
     serviceDetails,
     totalPrice,
+    finalPrice, // nhận thêm finalPrice
+    promotionId, // nhận thêm promotionId
+    promotionDiscount // nhận thêm promotionDiscount
   } = req.body.params;
 
   console.log("roomdetails: ", roomDetails);
@@ -116,6 +119,9 @@ exports.createBooking = asyncHandler(async (req, res) => {
       checkInDate: checkIn,
       checkOutDate: checkOut,
       totalPrice: totalPrice,
+      finalPrice: finalPrice, // lưu finalPrice
+      promotionId: promotionId || null, // lưu promotionId nếu có
+      promotionDiscount: promotionDiscount || 0, // lưu promotionDiscount nếu có
       rooms: roomDetails.map(({ room, amount }) => ({
         room: room._id,
         quantity: amount,
@@ -209,7 +215,7 @@ exports.checkoutBooking = asyncHandler(async (req, res) => {
             product_data: {
               name: reservation.hotel.hotelName,
             },
-            unit_amount: Math.round(reservation.totalPrice * 100),
+            unit_amount: Math.round((reservation.finalPrice || reservation.totalPrice) * 100), // Ưu tiên finalPrice
           },
           quantity: 1,
         },
@@ -217,7 +223,7 @@ exports.checkoutBooking = asyncHandler(async (req, res) => {
       metadata: {
         reservationId: reservationId.toString(),
       },
-      success_url: `http://localhost:3000/payment_success?reservationId=${reservationId}&totalPrice=${reservation.totalPrice}`,
+      success_url: `http://localhost:3000/payment_success?reservationId=${reservationId}&totalPrice=${reservation.finalPrice || reservation.totalPrice}`,
       cancel_url: `http://localhost:3000/payment_failed?reservationId=${reservationId}`,
     });
 
@@ -299,7 +305,7 @@ async function confirmPayment(event) {
       const bookingDetailsForEmail = {
         // Simplified for example, adjust based on your needs
         hotelName: reservation.hotel.hotelName,
-        totalPrice: reservation.totalPrice,
+        totalPrice: reservation.finalPrice || reservation.totalPrice, // ưu tiên finalPrice nếu có
         // Add other relevant details
       };
       await sendEmail(
