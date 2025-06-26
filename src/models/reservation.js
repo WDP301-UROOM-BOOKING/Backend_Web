@@ -85,6 +85,10 @@ const reservationSchema = new Schema(
       type: Number,
       default: 0,
     },
+    stripeSessionId: {
+      type: String,
+      default: null,
+    },
     createdAt: { type: Date, default: Date.now },
   },
   { timestamps: true, versionKey: false }
