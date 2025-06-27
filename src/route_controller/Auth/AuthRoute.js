@@ -44,5 +44,11 @@ authRouter.get("/all-customers", checkAdmin.isAdmin, AuthController.getAllCustom
 
 authRouter.put("/lock-customer/:id", checkAdmin.isAdmin, AuthController.lockCustomer);
 authRouter.put("/unlock-customer/:id", checkAdmin.isAdmin, AuthController.unlockCustomer);
+// thinh update manage hotel owner START 25/05/2025
+authRouter.get("/owners", checkRole(["ADMIN"]), AuthController.getAllOwners);
+authRouter.get("/hotels_of_owner/:id", checkRole(["ADMIN", "OWNER"]), AuthController.getHotelsByOwnerId);
+authRouter.put("/owner/:id", checkRole(["OWNER"]), AuthController.updateOwner);
+authRouter.delete("/owner/:id", checkRole(["ADMIN"]), AuthController.deleteOwner);
+// thinh update manage hotel owner END 25/05/2025
 
 module.exports = authRouter;
