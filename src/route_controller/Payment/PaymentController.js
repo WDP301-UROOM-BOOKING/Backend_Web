@@ -43,11 +43,14 @@ exports.createBooking = asyncHandler(async (req, res) => {
     const checkIn = new Date(checkInDate);
     const checkOut = new Date(checkOutDate);
 
-    //Check not paid reservation
-    const unpaidReservation = await Reservation.findOne({
-      user: user._id,
-      status: "NOT PAID",
-    });
+    //Check not paid reservation theo reservationId nếu có, ưu tiên reservationId từ request
+    let unpaidReservation = null;
+    if (req.body.params.reservationId) {
+      unpaidReservation = await Reservation.findOne({
+        _id: req.body.params.reservationId,
+        status: "NOT PAID",
+      });
+    } 
 
     // Nếu đã có unpaidReservation, kiểm tra promotionId có thay đổi không
     if (unpaidReservation) {
@@ -412,39 +415,6 @@ async function confirmPayment(event) {
 //   }
 // }
 // Thinh create webhook
-
-// Xử lý webhook Stripe khi session expired hoặc async_payment_failed
-async function cancelPayment(event) {
-  console.log('payment cancel')
-  const session = event.data.object;
-  const reservationId = session.metadata.reservationId;
-
-  try {
-    const reservation = await Reservation.findById(reservationId);
-    if (!reservation) {
-      throw new Error(NOT_FOUND_RESERVATION_MESSAGE);
-    }
-
-    // Nếu có promotionId và trạng thái là NOT PAID, PENDING, BOOKED thì giảm usedCount
-    if (
-      reservation.promotionId &&
-      ["NOT PAID", "PENDING", "BOOKED"].includes(reservation.status)
-    ) {
-      await Promotion.findByIdAndUpdate(
-        reservation.promotionId,
-        { $inc: { usedCount: -1 } },
-        { new: true }
-      );
-    }
-
-    // phần code thay đổi sau khi cancel thanh toán
-    reservation.status = NOT_PAID_BOOKING_STATUS; // Hoặc chuyển sang CANCELED nếu muốn
-    await reservation.save();
-    console.log(`Reservation ${reservationId} status changed to ${NOT_PAID_BOOKING_STATUS}.`);
-  } catch (error) {
-    console.error(`Error canceling payment for reservation ${reservationId}:`, error.message);
-  }
-}
 
 exports.cancelPayment = asyncHandler(async (req, res) => {
   const { reservationId } = req.body;
