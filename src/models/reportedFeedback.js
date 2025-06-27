@@ -26,6 +26,10 @@ const ReportedFeedbackSchema = new Schema(
       enum: ["PENDING", "APPROVED", "REJECT"],
       default: "PENDING",
     },
+    rejectReason: {
+      type: String,
+      default: "", 
+    },
   },
   { versionKey: false }
 );

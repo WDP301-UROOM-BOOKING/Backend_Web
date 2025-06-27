@@ -437,3 +437,43 @@ exports.getFeedbackById = async (req, res) => {
     });
   }
 };
+
+exports.updateFeedbackStatus = async (req, res) => {
+  try {
+    const { feedbackId } = req.params;
+    const { status } = req.body;
+
+    console.log("status: ", status);
+    if (!["ACTIVE", "NONACTIVE"].includes(status)) {
+      return res.status(400).json({
+        error: true,
+        message: "Trạng thái không hợp lệ. Chỉ cho phép 'ACTIVE' hoặc 'NONACTIVE'.",
+      });
+    }
+
+    const feedback = await Feedback.findById(feedbackId);
+
+    if (!feedback) {
+      return res.status(404).json({
+        error: true,
+        message: "Feedback không tồn tại.",
+      });
+    }
+
+    feedback.statusActive = status;
+    await feedback.save();
+
+    return res.status(200).json({
+      error: false,
+      message: `Cập nhật trạng thái feedback thành công: ${status}`,
+      data: feedback,
+    });
+  } catch (error) {
+    console.error("Lỗi khi cập nhật trạng thái feedback:", error);
+    return res.status(500).json({
+      error: true,
+      message: "Lỗi server khi cập nhật trạng thái feedback.",
+    });
+  }
+};
+
