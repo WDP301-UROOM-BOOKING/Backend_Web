@@ -101,7 +101,6 @@ exports.updateReportStatus = asyncHandler(async (req, res) => {
 
 exports.getAllReportedFeedbacks = asyncHandler(async (req, res) => {
   const userId = Number(req.user._id);
-  const isAdmin = req.user.role === 'admin'; // Hoặc kiểm tra bằng role code nếu có
 
   const query = isAdmin ? {} : { user: userId };
 
@@ -164,7 +163,7 @@ exports.getReportedFeedbackByUserId = asyncHandler(async (req, res) => {
       message: "Không có báo cáo nào được tìm thấy cho người dùng này.",
     });
   }
-
+  console.log("Reports:", reports);
   res.status(200).json({
     error: false,
     message: "Lấy báo cáo phản hồi theo người dùng thành công.",
@@ -174,3 +173,127 @@ exports.getReportedFeedbackByUserId = asyncHandler(async (req, res) => {
 
 
 
+exports.getAllReportedFeedbackDetails = asyncHandler(async (req, res) => {
+
+  const reportedFeedbacks = await ReportedFeedback.find({})
+    .populate({
+      path: "feedback",
+      populate: [
+        { path: "hotel", model: "Hotel" },
+        { path: "user", model: "User" } // <-- LẤY NGƯỜI ĐÁNH GIÁ
+      ]
+    })
+    .populate("user"); 
+
+  const uniqueFeedbackMap = new Map();
+
+  for (const report of reportedFeedbacks) {
+    const feedbackId = report.feedback?._id?.toString();
+    if (!feedbackId) continue;
+
+   
+    if (!uniqueFeedbackMap.has(feedbackId)) {
+      uniqueFeedbackMap.set(feedbackId, {
+        feedback: report.feedback,
+        reports: [],
+      });
+    }
+
+   
+    uniqueFeedbackMap.get(feedbackId).reports.push({
+      reportedBy: report.user,
+      createdAt: report.createdAt,
+      reason: report.reason,
+      description: report.description,
+      status: report.status,
+    });
+  }
+
+  const result = Array.from(uniqueFeedbackMap.values());
+
+  return res.status(200).json({
+    error: false,
+    message: "Lấy danh sách feedback bị báo cáo thành công.",
+    data: result,
+  });
+});
+exports.getAllReportsOfFeedback = asyncHandler(async (req, res) => {
+  const { feedbackId } = req.params;
+
+  if (!feedbackId) {
+    return res.status(400).json({
+      error: true,
+      message: "Thiếu feedbackId.",
+    });
+  }
+
+  const reports = await ReportedFeedback.find({ feedback: feedbackId })
+    .populate("user") 
+    .populate({
+      path: "feedback",
+      populate: [
+        { path: "hotel", model: "Hotel" },
+        { path: "user", model: "User" } 
+      ]
+    });
+
+  if (!reports || reports.length === 0) {
+    return res.status(404).json({
+      error: true,
+      message: "Không tìm thấy báo cáo nào cho feedback này.",
+    });
+  }
+
+  return res.status(200).json({
+    error: false,
+    message: "Lấy danh sách báo cáo thành công.",
+    data: reports,
+  });
+});
+exports.updateReportStatus = asyncHandler(async (req, res) => {
+  const { reportId } = req.params;
+  const { status, rejectReason } = req.body;
+
+  if (!["APPROVED", "REJECT"].includes(status)) {
+    return res.status(400).json({
+      error: true,
+      message: "Trạng thái không hợp lệ. Chỉ cho phép APPROVED hoặc REJECT.",
+    });
+  }
+
+  const report = await ReportedFeedback.findById(reportId);
+  if (!report) {
+    return res.status(404).json({
+      error: true,
+      message: "Báo cáo không tồn tại.",
+    });
+  }
+
+  if (report.status !== "PENDING") {
+    return res.status(400).json({
+      error: true,
+      message: "Chỉ có thể cập nhật trạng thái khi báo cáo đang chờ xử lý (PENDING).",
+    });
+  }
+
+  if (status === "REJECT" && (!rejectReason || rejectReason.trim() === "")) {
+    return res.status(400).json({
+      error: true,
+      message: "Cần cung cấp lý do từ chối khi cập nhật trạng thái là REJECT.",
+    });
+  }
+
+  report.status = status;
+
+  if (status === "REJECT") {
+    report.rejectReason = rejectReason.trim();
+  }
+
+  await report.save();
+
+  res.status(200).json({
+    error: false,
+    message: "Cập nhật trạng thái thành công.",
+    data: report,
+  });
+});

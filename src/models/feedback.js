@@ -7,9 +7,9 @@ const FeedbackSchema = new Schema(
     user: { type: mongoose.Schema.Types.Number, ref: "User", required: true }, // User ID
     reservation: {
       type: Schema.Types.ObjectId,
-      ref: "Reservation", // sửa đúng ref là "Reservation"
+      ref: "Reservation",
       required: true,
-    }, // Reservation ID
+    }, 
     hotel: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Hotel",
@@ -26,6 +26,11 @@ const FeedbackSchema = new Schema(
       type: mongoose.Schema.Types.Number, 
       ref: "User" 
     }],
+    statusActive: {
+      type: String,
+      enum: ["ACTIVE", "NONACTIVE"],
+      default: "ACTIVE"
+    },
   },
   { versionKey: false }
 );

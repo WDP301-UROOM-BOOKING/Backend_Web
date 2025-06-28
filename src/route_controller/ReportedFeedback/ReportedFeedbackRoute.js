@@ -3,6 +3,7 @@ const ReportFeedbackRouter = express.Router();
 const ReportFeedbackController = require("./ReportedFeedbackController");
 const checkCustomer = require("../../middlewares/checkCustomer");
 const checkOwner = require("../../middlewares/checkOwner");
+const { isAdmin } = require("../../middlewares/checkAdmin");
 
 ReportFeedbackRouter.get(
   "/getAllReportedFeedbacks",
@@ -33,5 +34,15 @@ ReportFeedbackRouter.get(
   checkCustomer,
   ReportFeedbackController.getReportedFeedbackByUserId
 );
-
+ReportFeedbackRouter.get(
+  "/getReportedFeedbackDetails",
+  isAdmin,
+  ReportFeedbackController.getAllReportedFeedbackDetails 
+);
+ReportFeedbackRouter.get(
+  "/getReportedFeedbackByFeedbackId/:feedbackId",
+  isAdmin,
+  ReportFeedbackController.getAllReportsOfFeedback 
+);
+ReportFeedbackRouter.put("/updateReportStatus/:reportId", isAdmin, ReportFeedbackController.updateReportStatus);
 module.exports = ReportFeedbackRouter;

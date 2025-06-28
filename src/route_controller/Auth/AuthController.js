@@ -8,6 +8,7 @@ const { emailVerificationTemplate } = require("../../utils/emailTemplates");
 const admin = require("../../config/firebaseAdminConfig").default;
 const Reservation = require("../../models/reservation");
 
+const Hotel = require("../../models/hotel")
 exports.loginCustomer = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -642,3 +643,93 @@ exports.unlockCustomer = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+// Thinh update manage hotel owner START 25/06/2025
+exports.getAllOwners = async (req, res) => {
+  try {
+    const owners = await User.find({ role: "OWNER" });
+    res.json({
+      MsgYes: "Fetched all owners successfully",
+      Data: owners,
+    });
+  } catch (error) {
+    console.error("Get all owners error:", error);
+    res.status(500).json({ MsgNo: "Internal server error" });
+  }
+};
+
+exports.getHotelsByOwnerId = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Kiểm tra xem Owner có tồn tại hay không (tùy chọn, có thể bỏ nếu không cần)
+    const owner = await User.findOne({ _id: id, role: "OWNER" });
+    if (!owner) {
+      return res.status(404).json({ MsgNo: "Owner not found" });
+    }
+
+    // Truy vấn các khách sạn có owner là id được truyền vào
+    const hotels = await Hotel.find({ owner: id });
+
+    res.json({
+      MsgYes: "Hotels retrieved successfully",
+      Data: hotels,
+    });
+  } catch (error) {
+    console.error("Get hotels by owner ID error:", error);
+    res.status(500).json({ MsgNo: "Internal server error" });
+  }
+};
+
+exports.updateOwner = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, phoneNumber, address } = req.body;
+
+    // Chỉ cho phép chủ tài khoản cập nhật chính họ
+    if (req.user._id.toString() !== id) {
+      return res.status(403).json({ MsgNo: "Permission denied" });
+    }
+
+    const owner = await User.findOne({ _id: id, role: "OWNER" });
+
+    if (!owner) {
+      return res.status(404).json({ MsgNo: "Owner not found" });
+    }
+
+    owner.name = name || owner.name;
+    owner.phoneNumber = phoneNumber || owner.phoneNumber;
+    owner.address = address || owner.address;
+    owner.updatedAt = new Date();
+
+    await owner.save();
+
+    res.json({
+      MsgYes: "Owner updated successfully",
+      Data: owner,
+    });
+  } catch (error) {
+    console.error("Update owner error:", error);
+    res.status(500).json({ MsgNo: "Internal server error" });
+  }
+};
+
+exports.deleteOwner = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deleted = await User.findOneAndDelete({ _id: id, role: "OWNER" });
+
+    if (!deleted) {
+      return res.status(404).json({ MsgNo: "Owner not found" });
+    }
+
+    res.json({
+      MsgYes: "Owner deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete owner error:", error);
+    res.status(500).json({ MsgNo: "Internal server error" });
+  }
+};
+
+// Thinh update manage hotel owner END 25/06/2025
