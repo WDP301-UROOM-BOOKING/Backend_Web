@@ -7,12 +7,8 @@ const checkAdmin = require('../../middlewares/checkAdmin');
 // // Create promotion (Admin only)
 // router.post('/', checkAdmin, promotionController.createPromotion);
 
-// // Get all promotions (Admin or Customer)
-// router.get('/', promotionController.getAllPromotions);
-//Test 
-router.get('/test', (req, res) => {
-  res.json({ message: 'Promotion route is working!' });
-});
+// Get all promotions (Admin or Customer)
+router.get('/', promotionController.getAllPromotions);
 
 // // Get single promotion by ID (Admin or Customer)
 // router.get('/:id', promotionController.getPromotionById);

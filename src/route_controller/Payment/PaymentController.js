@@ -440,10 +440,10 @@ exports.cancelPayment = asyncHandler(async (req, res) => {
         message: "Reservation is already cancelled",
       });
     } else {
-      // Giảm usedCount nếu có promotionId và trạng thái là NOT PAID, PENDING, BOOKED
+      // Giảm usedCount nếu có promotionId và trạng thái là NOT PAID, PENDING
       if (
         reservation.promotionId &&
-        ["NOT PAID", "PENDING", "BOOKED"].includes(reservation.status)
+        ["NOT PAID", "PENDING"].includes(reservation.status)
       ) {
         await Promotion.findByIdAndUpdate(
           reservation.promotionId,
