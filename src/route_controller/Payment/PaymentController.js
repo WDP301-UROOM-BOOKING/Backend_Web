@@ -489,3 +489,140 @@ exports.getReservations = asyncHandler(async (req, res) => {
       .json({ error: true, message: "Failed to get reservations" });
   }
 });
+
+
+exports.createBookingOffline = asyncHandler(async (req, res) => {
+  const user = req.user;
+  const {
+    hotelId,
+    checkInDate,
+    checkOutDate,
+    roomDetails,
+    serviceDetails,
+    totalPrice,
+    finalPrice, // nhận thêm finalPrice
+    promotionId, // nhận thêm promotionId
+    promotionDiscount // nhận thêm promotionDiscount
+  } = req.body.params;
+
+  console.log("roomdetails: ", roomDetails);
+  console.log("serviceDetails: ", serviceDetails);
+  
+  try {
+    if (!user._id || !hotelId || !checkInDate || !checkOutDate) {
+      return res
+        .status(400)
+        .json({ error: true, message: "Missing required fields" });
+    }
+
+    console.log("0")
+    const checkIn = new Date(checkInDate);
+    const checkOut = new Date(checkOutDate);
+
+    for (let room of roomDetails) {
+      console.log("room: ", room);
+      const roomFind = await Room.findById(room.room._id);
+      console.log("Id: ", room.room._id);
+
+      // First, find all bookings that overlap with the requested period
+      const overlappingBookings = await RoomAvailability.find({
+        room: new mongoose.Types.ObjectId(room.room._id),
+        checkInDate: { $lt: checkOut },
+        checkOutDate: { $gt: checkIn },
+      });
+
+      // Process the overlapping bookings to determine the maximum occupancy
+      let maxBookedQuantity = 0;
+      let dateMap = new Map();
+
+      // Create a map of all dates in the range and their booked quantities
+      for (const booking of overlappingBookings) {
+        // Get all dates between checkIn and checkOut for this booking
+        let currentDate = new Date(Math.max(booking.checkInDate, checkIn));
+        const endDate = new Date(Math.min(booking.checkOutDate, checkOut));
+
+        while (currentDate < endDate) {
+          const dateStr = currentDate.toISOString().split("T")[0];
+          const currentBooked = dateMap.get(dateStr) || 0;
+          dateMap.set(dateStr, currentBooked + booking.bookedQuantity);
+          // Move to next day
+          // currentDate.set;
+          // Date(currentDate.getDate() + 1);
+
+          // Thinh update createbooking START 16/06/2025
+          currentDate.setDate(currentDate.getDate() + 1);
+
+          // Thinh update createbooking END 16/06/2025
+        }
+      }
+      // Find the maximum booked quantity for any day in the range
+      for (const bookedQuantity of dateMap.values()) {
+        console.log("bookedQuantity >> ", bookedQuantity);
+        maxBookedQuantity = Math.max(maxBookedQuantity, bookedQuantity);
+      }
+
+      console.log("roomFind quantity: ", roomFind.quantity);
+      console.log("maxBookedQuantity: ", maxBookedQuantity);
+      console.log("requested quantity: ", room.amount);
+
+      console.log('1')
+      // Check if the requested amount exceeds available capacity
+      if (room.amount > roomFind.quantity - maxBookedQuantity) {
+        return res.status(400).json({
+          error: true,
+          message:
+            "Failed to create reservation. Not enough rooms available for the selected dates.",
+        });
+      }
+
+    }
+
+    // Create new reservation
+    const reservation = new Reservation({
+      user: user._id,
+      hotel: hotelId,
+      checkInDate: checkIn,
+      checkOutDate: checkOut,
+      totalPrice: totalPrice,
+      finalPrice: finalPrice, // lưu finalPrice
+      promotionId: promotionId || null, // lưu promotionId nếu có
+      promotionDiscount: promotionDiscount || 0, // lưu promotionDiscount nếu có
+      rooms: roomDetails.map(({ room, amount }) => ({
+        room: room._id,
+        quantity: amount,
+      })),
+      services:
+        serviceDetails?.map((service) => ({
+          service: service._id,
+          quantity: service.quantity,
+          selectDate: service.selectDate,
+        })) || [],
+      status: "OFFLINE", // Trạng thái đặt phòng offline
+    });
+
+    await reservation.save();
+
+    // Update room availability
+    for (const { room, amount } of roomDetails) {
+      const roomAvailability = new RoomAvailability({
+        room: room._id,
+        reservation: reservation._id,
+        checkInDate: checkIn,
+        checkOutDate: checkOut,
+        bookedQuantity: amount,
+      });
+      await roomAvailability.save();
+    }
+
+    return res.status(201).json({
+      message: "Create booking successfully",
+      reservation: reservation,
+    });
+  } catch (error) {
+    console.error("Error creating booking:", error);
+    return res.status(500).json({
+      error: true,
+      message: "Error creating booking",
+    });
+  }
+});

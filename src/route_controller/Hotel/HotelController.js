@@ -8,6 +8,9 @@ const HotelFacility = require("../../models/hotelFacility");
 const HotelService = require("../../models/hotelService");
 const hotelFacility = require("../../models/hotelFacility");
 const cloudinary = require("../../config/cloudinaryConfig"); // Đảm bảo path đúng
+const Room = require("../../models/room");
+const RoomFacility = require("../../models/roomFacility");
+const Bed = require("../../models/bed");
 
 
 exports.getAllHotels = asyncHandler(async (req, res) => {
@@ -561,16 +564,23 @@ exports.getTop5HotelsByLocation = asyncHandler(async (req, res) => {
 });
 exports.createHotel= asyncHandler(async (req, res) => {
 
-  const { hotelName, description, address, phoneNumber, email, services, facilities, rating, star, pricePerNight, images, businessDocuments, checkInStart, checkInEnd, checkOutStart, checkOutEnd } = req.body;
+  const { hotelName, description, address, phoneNumber, email, services, facilities, rating, star, pricePerNight, images, businessDocuments, checkInStart, checkInEnd, checkOutStart, checkOutEnd } = req.body.createHotel;
+  const { createRoomList, createService } = req.body;
+  
+  console.log("createHotel: ", req.body.createHotel)
+  console.log("createRoomList: ", req.body.createRoomList)
+  console.log("createService: ", req.body.createService)
+  
   const owner = req.user._id;
 
+  // Map facility names to IDs
   const allFacilities = await hotelFacility.find({});
   const nameToIdMap = {};
   allFacilities.forEach(facility => {
     nameToIdMap[facility.name] = facility._id;
   });
 
-  let facilitiesId= []
+  let facilitiesId = []
   if (facilities && Array.isArray(facilities)) {
     facilitiesId = facilities
       .map(name => nameToIdMap[name])
@@ -584,7 +594,7 @@ exports.createHotel= asyncHandler(async (req, res) => {
     address,
     phoneNumber: phoneNumber,
     email: email,
-    services,
+    services: [], // Will be populated after creating services
     facilities: facilitiesId,
     pricePerNight: 0,
     rating: 0,
@@ -597,23 +607,116 @@ exports.createHotel= asyncHandler(async (req, res) => {
     checkOutStart,
     checkOutEnd 
   });
-  console.log("2")
 
   try {
+    // Save hotel first
     const savedHotel = await newHotel.save();
-      const user = await User.findById(owner);
-      user.ownedHotels.push(savedHotel._id);
-      await user.save(); 
+    
+    // Update user's owned hotels
+    const user = await User.findById(owner);
+    user.ownedHotels.push(savedHotel._id);
+    await user.save();
+
+    // Create hotel services
+    const createdServices = [];
+    if (createService && Array.isArray(createService) && createService.length > 0) {
+      for (const serviceData of createService) {
+        const newService = new HotelService({
+          name: serviceData.name,
+          description: serviceData.description,
+          type: serviceData.type,
+          price: serviceData.price,
+          statusActive: "NONACTIVE" // Default status
+        });
+        
+        const savedService = await newService.save();
+        createdServices.push(savedService._id);
+      }
+      
+      // Update hotel with created services
+      savedHotel.services = createdServices;
+      await savedHotel.save();
+    }
+
+    // Create rooms
+    const createdRooms = [];
+    if (createRoomList && Array.isArray(createRoomList) && createRoomList.length > 0) {
+      // Get room facilities mapping
+      const allRoomFacilities = await RoomFacility.find({});
+      const roomFacilityNameToIdMap = {};
+      allRoomFacilities.forEach(facility => {
+        roomFacilityNameToIdMap[facility.name] = facility._id;
+      });
+
+      // Get bed mapping
+      const allBeds = await Bed.find({});
+      const bedNameToIdMap = {};
+      allBeds.forEach(bed => {
+        bedNameToIdMap[bed.name] = bed._id;
+      });
+
+      for (const roomData of createRoomList) {
+        // Map facility names to IDs for room
+        let roomFacilitiesId = [];
+        if (roomData.facilities && Array.isArray(roomData.facilities)) {
+          roomFacilitiesId = roomData.facilities
+            .map(name => roomFacilityNameToIdMap[name])
+            .filter(id => id);
+        }
+
+        // Map bed data
+        let bedArray = [];
+        if (roomData.bed && Array.isArray(roomData.bed)) {
+          bedArray = roomData.bed.map(bedItem => ({
+            bed: bedNameToIdMap[bedItem.bed] || bedItem.bed,
+            quantity: bedItem.quantity
+          }));
+        }
+
+        const newRoom = new Room({
+          name: roomData.name,
+          type: roomData.type,
+          price: roomData.price,
+          capacity: roomData.capacity,
+          description: roomData.description,
+          images: roomData.images || [],
+          quantity: roomData.quantity,
+          hotel: savedHotel._id,
+          bed: bedArray,
+          facilities: roomFacilitiesId,
+          statusActive: "NONACTIVE" // Default status
+        });
+        
+        const savedRoom = await newRoom.save();
+        createdRooms.push(savedRoom);
+      }
+    }
+
+    console.log(`Created hotel with ${createdServices.length} services and ${createdRooms.length} rooms`);
+
     return res.status(201).json({
       error: false,
       message: "Hotel created successfully",
       hotel: savedHotel,
+      servicesCreated: createdServices.length,
+      roomsCreated: createdRooms.length,
+      data: {
+        hotel: savedHotel,
+        services: createdServices,
+        rooms: createdRooms
+      }
     });
+
   } catch (error) {
     console.error("Error creating hotel:", error);
+    
+    // If hotel was created but services/rooms failed, we might want to clean up
+    // This is optional - you can decide whether to keep the hotel or delete it
+    
     return res.status(500).json({
       error: true,
       message: "Failed to create hotel",
+      details: error.message
     });
   }
 });
