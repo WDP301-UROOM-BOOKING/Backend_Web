@@ -223,8 +223,8 @@ exports.checkoutBooking = asyncHandler(async (req, res) => {
       metadata: {
         reservationId: reservationId.toString(),
       },
-      success_url: `http://localhost:3000/payment_success?reservationId=${reservationId}&totalPrice=${reservation.finalPrice || reservation.totalPrice}`,
-      cancel_url: `http://localhost:3000/payment_failed?reservationId=${reservationId}`,
+      success_url: `${process.env.ENVIRONMENT === 'production' ? process.env.FRONTEND_CUSTOMER_URL_PRODUCT : process.env.FRONTEND_CUSTOMER_URL_DEVELOPMENT}/payment_success?reservationId=${reservationId}&totalPrice=${reservation.finalPrice || reservation.totalPrice}`,
+      cancel_url: `${process.env.ENVIRONMENT === 'production' ? process.env.FRONTEND_CUSTOMER_URL_PRODUCT : process.env.FRONTEND_CUSTOMER_URL_DEVELOPMENT}/payment_failed?reservationId=${reservationId}`,
     });
 
     return res.status(200).json({
