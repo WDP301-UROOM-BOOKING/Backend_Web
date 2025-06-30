@@ -17,7 +17,7 @@ exports.getAllPromotions = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const search = req.query.search || '';
-    const status = req.query.status; // 'active', 'inactive', 'expired', 'all'
+    const status = req.query.status; // 'active', 'inactive', 'expired', 'upcoming', 'all'
     const sortBy = req.query.sortBy || 'createdAt';
     const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
 
@@ -43,6 +43,10 @@ exports.getAllPromotions = async (req, res) => {
       filter.isActive = false;
     } else if (status === 'expired') {
       filter.endDate = { $lt: now };
+    } else if (status === 'upcoming') {
+      // Upcoming: active promotions that haven't started yet
+      filter.isActive = true;
+      filter.startDate = { $gt: now };
     }
 
     // Calculate skip value
@@ -67,7 +71,11 @@ exports.getAllPromotions = async (req, res) => {
         endDate: { $gte: now }
       }),
       inactive: await Promotion.countDocuments({ isActive: false }),
-      expired: await Promotion.countDocuments({ endDate: { $lt: now } })
+      expired: await Promotion.countDocuments({ endDate: { $lt: now } }),
+      upcoming: await Promotion.countDocuments({
+        isActive: true,
+        startDate: { $gt: now }
+      })
     };
 
     res.json({
