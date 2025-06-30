@@ -45,17 +45,21 @@ const getDashboardMetrics = asyncHandler(async (req, res) => {
   const allReservations = await Reservation.find({
     hotel: { $in: hotelIds },
     createdAt: { $gte: startDate, $lte: now },
-    status: { $in: ["COMPLETED", "CHECKED IN", "CHECKED OUT", "BOOKED"] }
+    status: { $in: ["COMPLETED", "CHECKED IN", "CHECKED OUT", "BOOKED", "PENDING"] }
   }).populate("hotel room");
 
   // Calculate completed revenue (doanh thu đã hoàn thành)
   const completedRevenue = completedReservations.reduce((sum, reservation) => {
-    return sum + (reservation.finalPrice || reservation.totalPrice || 0);
+    // Ưu tiên finalPrice (giá sau khuyến mãi), nếu không có thì dùng totalPrice
+    const price = reservation.finalPrice > 0 ? reservation.finalPrice : reservation.totalPrice;
+    return sum + price;
   }, 0);
 
   // Calculate total revenue (tổng doanh thu từ tất cả đặt phòng)
   const totalRevenue = allReservations.reduce((sum, reservation) => {
-    return sum + (reservation.finalPrice || reservation.totalPrice || 0);
+    // Ưu tiên finalPrice (giá sau khuyến mãi), nếu không có thì dùng totalPrice
+    const price = reservation.finalPrice > 0 ? reservation.finalPrice : reservation.totalPrice;
+    return sum + price;
   }, 0);
 
   // Get total rooms
@@ -116,7 +120,7 @@ const getDashboardMetrics = asyncHandler(async (req, res) => {
             booking.status === "CHECKED IN" ? "Đã check-in" :
             booking.status === "CHECKED OUT" ? "Đã check-out" :
             booking.status === "COMPLETED" ? "Đã hoàn thành" : "Đang xử lý",
-    amount: `$${(booking.finalPrice || booking.totalPrice || 0).toLocaleString()}`
+    amount: `$${(booking.finalPrice > 0 ? booking.finalPrice : booking.totalPrice || 0).toLocaleString()}`
   }));
 
   // Mock revenue data for chart (12 months) - sử dụng tổng doanh thu
@@ -163,16 +167,19 @@ const getDashboardMetrics = asyncHandler(async (req, res) => {
 
     // Tổng doanh thu loại phòng này
     const typeRevenue = typeReservations.reduce((sum, res) => {
+      // Ưu tiên finalPrice (giá sau khuyến mãi), nếu không có thì dùng totalPrice
+      const price = res.finalPrice > 0 ? res.finalPrice : res.totalPrice;
+      
       // Nếu reservation có nhiều phòng, chia đều doanh thu cho các phòng
       if (Array.isArray(res.rooms) && res.rooms.length > 0) {
         const matched = res.rooms.filter(rm => roomIds.includes(rm.room?.toString?.()));
         if (matched.length > 0) {
-          return sum + ((res.finalPrice || res.totalPrice || 0) * matched.length / res.rooms.length);
+          return sum + (price * matched.length / res.rooms.length);
         }
       }
       // Nếu reservation chỉ có 1 phòng
       if (res.room && roomIds.includes(res.room._id?.toString?.())) {
-        return sum + (res.finalPrice || res.totalPrice || 0);
+        return sum + price;
       }
       return sum;
     }, 0);
@@ -222,6 +229,7 @@ const getDashboardMetrics = asyncHandler(async (req, res) => {
     roomTypeStats.push({
       type,
       quantity,
+      quantity,
       occupancy,
       avgPrice,
       revenue: typeRevenue,
@@ -238,7 +246,10 @@ const getDashboardMetrics = asyncHandler(async (req, res) => {
   for (const hotel of hotels) {
     // Lấy reservation của hotel này (tất cả trạng thái)
     const hotelReservations = allReservations.filter(res => res.hotel && res.hotel._id.toString() === hotel._id.toString());
-    const revenue = hotelReservations.reduce((sum, res) => sum + (res.finalPrice || res.totalPrice || 0), 0);
+    const revenue = hotelReservations.reduce((sum, res) => {
+      const price = res.finalPrice > 0 ? res.finalPrice : res.totalPrice;
+      return sum + price;
+    }, 0);
     hotelRevenueStats.push({
       hotelId: hotel._id,
       hotelName: hotel.hotelName,
@@ -247,34 +258,59 @@ const getDashboardMetrics = asyncHandler(async (req, res) => {
     });
   }
 
-  // --- Tổng hợp doanh thu từng tháng (12 tháng gần nhất) ---
+  // --- Tổng hợp doanh thu từng tháng (từ tháng 1 đến tháng hiện tại) ---
   const nowDate = new Date();
   const monthlyRevenueStats = [];
-  for (let i = 0; i < 12; i++) {
-    const month = nowDate.getMonth() + 1 - i;
-    const year = nowDate.getFullYear() - (month <= 0 ? 1 : 0);
-    const realMonth = ((month - 1 + 12) % 12) + 1;
-    // Lấy reservation trong tháng này (tất cả trạng thái)
-    const monthStart = new Date(year, realMonth - 1, 1);
-    const monthEnd = new Date(year, realMonth, 1);
-    const monthReservations = await Reservation.find({
-      hotel: { $in: hotelIds },
-      createdAt: { $gte: monthStart, $lt: monthEnd },
-      status: { $in: ["COMPLETED", "CHECKED IN", "CHECKED OUT", "BOOKED"] }
+  
+  // Tính từ tháng 1 đến tháng hiện tại của năm hiện tại
+  const currentYear = nowDate.getFullYear();
+  const currentMonth = nowDate.getMonth() + 1;
+  
+  // Tối ưu hóa: Lấy tất cả reservation từ tháng 1 đến tháng hiện tại
+  const yearStart = new Date(currentYear, 0, 1); // Tháng 1
+  const allMonthlyReservations = await Reservation.find({
+    hotel: { $in: hotelIds },
+    createdAt: { $gte: yearStart, $lte: nowDate },
+    status: { $in: ["COMPLETED", "CHECKED IN", "CHECKED OUT", "BOOKED", "PENDING"] }
+  });
+
+  for (let month = 1; month <= currentMonth; month++) {
+    // Tính thời gian bắt đầu và kết thúc của tháng
+    const monthStart = new Date(currentYear, month - 1, 1);
+    const monthEnd = new Date(currentYear, month, 1);
+    
+    // Lọc reservation trong tháng này từ dữ liệu đã lấy
+    const monthReservations = allMonthlyReservations.filter(res => {
+      const createdAt = new Date(res.createdAt);
+      return createdAt >= monthStart && createdAt < monthEnd;
     });
-    const revenue = monthReservations.reduce((sum, res) => sum + (res.finalPrice || res.totalPrice || 0), 0);
+    
+    // Tính tổng doanh thu của tháng
+    const revenue = monthReservations.reduce((sum, res) => {
+      const price = res.finalPrice > 0 ? res.finalPrice : res.totalPrice;
+      return sum + price;
+    }, 0);
+    
+    // Tính hoa hồng (12%) và số tiền thực tế cho chủ khách sạn (88%)
+    const commission = Math.floor(revenue * 0.12);
+    const actualAmountToHost = Math.floor(revenue * 0.88);
+    
     // Lấy monthly payment (nếu có)
     const monthlyPayment = await MonthlyPayment.findOne({
       hotel: { $in: hotelIds },
-      month: realMonth,
-      year: year
+      month: month,
+      year: currentYear
     });
-    monthlyRevenueStats.unshift({
-      month: realMonth,
-      year: year,
+    
+    monthlyRevenueStats.push({
+      month: month,
+      year: currentYear,
       revenue,
       monthlyPayment: monthlyPayment ? monthlyPayment.amount : 0,
-      paymentStatus: monthlyPayment ? monthlyPayment.status : null
+      paymentStatus: monthlyPayment ? monthlyPayment.status : null,
+      reservationCount: monthReservations.length, // Thêm số lượng reservation
+      commission,
+      actualAmountToHost
     });
   }
 

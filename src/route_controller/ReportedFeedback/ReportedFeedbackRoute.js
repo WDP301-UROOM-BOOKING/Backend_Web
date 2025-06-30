@@ -4,6 +4,7 @@ const ReportFeedbackController = require("./ReportedFeedbackController");
 const checkCustomer = require("../../middlewares/checkCustomer");
 const checkOwner = require("../../middlewares/checkOwner");
 const { isAdmin } = require("../../middlewares/checkAdmin");
+const checkRole = require("../../middlewares/checkRole");
 
 ReportFeedbackRouter.get(
   "/getAllReportedFeedbacks",
@@ -31,7 +32,7 @@ ReportFeedbackRouter.post(
 );
 ReportFeedbackRouter.get(
   "/my-reports",
-  checkCustomer,
+  checkRole(["CUSTOMER", "OWNER"]),
   ReportFeedbackController.getReportedFeedbackByUserId
 );
 ReportFeedbackRouter.get(

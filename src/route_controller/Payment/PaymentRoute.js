@@ -32,11 +32,10 @@ PaymentRouter.get(
   PaymentController.getReservations
 );
 
-// Webhook Stripe phải dùng raw body
-// PaymentRouter.post(
-//   "/api/payment/webhook",
-//   bodyParser.raw({ type: "application/json" }),
-//   PaymentController.stripeWebhookHandler
-// )
+PaymentRouter.post(
+  "/create-booking-offline",
+  checkOwner,
+  PaymentController.createBookingOffline
+);
 
 module.exports = PaymentRouter;

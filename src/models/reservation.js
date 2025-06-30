@@ -64,6 +64,7 @@ const reservationSchema = new Schema(
         "PENDING",
         "CANCELLED",
         "NOT PAID",
+        "OFFLINE", // Trạng thái đặt phòng offline
       ],
       default: "PENDING",
     },
@@ -84,6 +85,10 @@ const reservationSchema = new Schema(
     promotionDiscount: {
       type: Number,
       default: 0,
+    },
+    stripeSessionId: {
+      type: String,
+      default: null,
     },
     createdAt: { type: Date, default: Date.now },
   },
