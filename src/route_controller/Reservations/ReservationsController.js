@@ -1,6 +1,6 @@
 const Reservation = require("../../models/reservation");
 const RefundingReservation = require("../../models/refundingReservation");
-
+const Promotion = require("../../models/Promotion");
 const cron = require("node-cron");
 const asyncHandler = require("../../middlewares/asyncHandler");
 const roomAvailability = require("../../models/roomAvailability");
@@ -105,6 +105,14 @@ const autoUpdateNotPaidReservation = asyncHandler(async () => {
 
     if (diffInMinutes >= 5 && r.status === "NOT PAID") {
       r.status = "CANCELLED";
+      // Giảm usedCount của promotion nếu có
+      if (r.promotionId) {
+        await Promotion.findByIdAndUpdate(
+          r.promotionId,
+          { $inc: { usedCount: -1 } },
+          { new: true }
+        );
+      }
       await r.save();
       console.log(
         `Reservation ${r._id} đã bị hủy do quá 5 phút chưa thanh toán.`
@@ -125,7 +133,14 @@ const autoUpdateNotPaidReservation = asyncHandler(async () => {
       if (now > checkinDeadline) {
         r.status = "CANCELLED";
         await r.save();
-
+        // Giảm usedCount của promotion nếu có
+        if (r.promotionId) {
+          await Promotion.findByIdAndUpdate(
+            r.promotionId,
+            { $inc: { usedCount: -1 } },
+            { new: true }
+          );
+        }
         await RefundingReservation.create({
           user: r.user._id,
           reservation: r._id,

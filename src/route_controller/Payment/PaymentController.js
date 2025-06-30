@@ -7,9 +7,10 @@ const mongoose = require("mongoose");
 const room = require("../../models/room");
 const HotelService = require("../../models/hotelService");
 const stripe = require("stripe")(process.env.STRIPE_API_KEY);
+const Promotion = require("../../models/Promotion"); 
 
 // Constants for booking statuses and messages
-const COMPLETED_BOOKING_STATUS = "COMPLETED";
+const COMPLETED_BOOKING_STATUS = "COMPLETED"; 
 const NOT_PAID_BOOKING_STATUS = "NOT_PAID";
 const NOT_FOUND_RESERVATION_MESSAGE = "Reservation not found";
 const webhookKey = process.env.STRIPE_WEBHOOK_SECRET;
@@ -42,18 +43,69 @@ exports.createBooking = asyncHandler(async (req, res) => {
     const checkIn = new Date(checkInDate);
     const checkOut = new Date(checkOutDate);
 
-    //Check not paid reservation
-    const unpaidReservation = await Reservation.findOne({
-      user: user._id,
-      status: "NOT PAID",
-    });
+    //Check not paid reservation theo reservationId nếu có, ưu tiên reservationId từ request
+    let unpaidReservation = null;
+    if (req.body.params.reservationId) {
+      unpaidReservation = await Reservation.findOne({
+        _id: req.body.params.reservationId,
+        status: "NOT PAID",
+      });
+    } 
 
+    // Nếu đã có unpaidReservation, kiểm tra promotionId có thay đổi không
     if (unpaidReservation) {
+      // Nếu đổi promotionId thì rollback usedCount cũ và tăng usedCount mới
+      if (
+        String(unpaidReservation.promotionId) !== String(promotionId || '')
+      ) {
+        // Giảm usedCount của promotion cũ nếu có
+        if (unpaidReservation.promotionId) {
+          await Promotion.findByIdAndUpdate(
+            unpaidReservation.promotionId,
+            { $inc: { usedCount: -1 } },
+            { new: true }
+          );
+        }
+        // Tăng usedCount của promotion mới nếu có
+        if (promotionId) {
+          await Promotion.findByIdAndUpdate(
+            promotionId,
+            { $inc: { usedCount: 1 } },
+            { new: true }
+          );
+        }
+      }
+      // Cập nhật các trường cần thiết
+      unpaidReservation.hotel = hotelId;
+      unpaidReservation.checkInDate = checkIn;
+      unpaidReservation.checkOutDate = checkOut;
+      unpaidReservation.totalPrice = totalPrice;
+      unpaidReservation.finalPrice = finalPrice;
+      unpaidReservation.promotionId = promotionId || null;
+      unpaidReservation.promotionDiscount = promotionDiscount || 0;
+      unpaidReservation.rooms = roomDetails.map(({ room, amount }) => ({
+        room: room._id,
+        quantity: amount,
+      }));
+      unpaidReservation.services = serviceDetails?.map((service) => ({
+        service: service._id,
+        quantity: service.quantity,
+        selectDate: service.selectDate,
+      })) || [];
+      await unpaidReservation.save();
       return res.json({
         unpaidReservation: unpaidReservation,
-        message:
-          "You must payment the not paid reservation before or wait 5 minutes to delete",
+        message: "Reservation updated successfully (NOT PAID)",
       });
+    }
+
+    // Tăng usedCount promotion nếu có promotionId
+    if (promotionId) {
+      await Promotion.findByIdAndUpdate(
+        promotionId,
+        { $inc: { usedCount: 1 } },
+        { new: true }
+      );
     }
 
     for (let room of roomDetails) {
@@ -190,21 +242,30 @@ exports.checkoutBooking = asyncHandler(async (req, res) => {
     // convert it to a plain JavaScript object first, or select specific fields.
 
     // Prepare line items for Stripe (this part of your code seems fine for Stripe)
-    const lineItems = reservation.rooms.map((roomItem) => {
-      return {
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: reservation.hotel.name,
-          },
-          unit_amount: Math.round(
-            (reservation.totalPrice * 100) / reservation.rooms.length
-          ),
-        },
-        quantity: roomItem.quantity,
-      };
-    });
+    // const lineItems = reservation.rooms.map((roomItem) => {
+    //   return {
+    //     price_data: {
+    //       currency: "usd",
+    //       product_data: {
+    //         name: reservation.hotel.name,
+    //       },
+    //       unit_amount: Math.round(
+    //         (reservation.totalPrice * 100) / reservation.rooms.length
+    //       ),
+    //     },
+    //     quantity: roomItem.quantity,
+    //   };
+    // });
 
+    // Nếu đã có sessionId cũ thì huỷ session Stripe cũ trước khi tạo mới
+    if (reservation.stripeSessionId) {
+      try {
+        await stripe.checkout.sessions.expire(reservation.stripeSessionId);
+      } catch (err) {
+        console.error("Error expiring old Stripe session:", err);
+      }
+    }
+    // Tạo session mới
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
@@ -226,6 +287,10 @@ exports.checkoutBooking = asyncHandler(async (req, res) => {
       success_url: `${process.env.ENVIRONMENT === 'production' ? process.env.FRONTEND_CUSTOMER_URL_PRODUCT : process.env.FRONTEND_CUSTOMER_URL_DEVELOPMENT}/payment_success?reservationId=${reservationId}&totalPrice=${reservation.finalPrice || reservation.totalPrice}`,
       cancel_url: `${process.env.ENVIRONMENT === 'production' ? process.env.FRONTEND_CUSTOMER_URL_PRODUCT : process.env.FRONTEND_CUSTOMER_URL_DEVELOPMENT}/payment_failed?reservationId=${reservationId}`,
     });
+
+    // Lưu sessionId mới vào reservation
+    reservation.stripeSessionId = session.id;
+    await reservation.save();
 
     return res.status(200).json({
       error: false,
@@ -375,6 +440,17 @@ exports.cancelPayment = asyncHandler(async (req, res) => {
         message: "Reservation is already cancelled",
       });
     } else {
+      // Giảm usedCount nếu có promotionId và trạng thái là NOT PAID, PENDING
+      if (
+        reservation.promotionId &&
+        ["NOT PAID", "PENDING"].includes(reservation.status)
+      ) {
+        await Promotion.findByIdAndUpdate(
+          reservation.promotionId,
+          { $inc: { usedCount: -1 } },
+          { new: true }
+        );
+      }
       try {
         const result = await RoomAvailability.deleteMany({
           reservation: reservationId,
