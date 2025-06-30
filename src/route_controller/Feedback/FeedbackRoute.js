@@ -2,6 +2,8 @@ const express = require("express");
 const FeedbackRouter = express.Router();
 const FeedbackController = require('./FeedbackController');
 const checkCustomer = require('../../middlewares/checkCustomer');
+const { isAdmin } = require("../../middlewares/checkAdmin");
+
 
 FeedbackRouter.get('/get-feedback-hotel/:hotelId', FeedbackController.getAllFeedBackByHotelId)
 FeedbackRouter.post("/like/:id",checkCustomer, FeedbackController.likeFeedback);
@@ -13,6 +15,6 @@ FeedbackRouter.delete('/delete-feedback/:feedbackId', checkCustomer, FeedbackCon
 // tạo mới feedback
 FeedbackRouter.post("/create-feedback", checkCustomer, FeedbackController.createFeedback);
 FeedbackRouter.get("/getFeedbackById/:feedbackId",  FeedbackController.getFeedbackById);
-
+FeedbackRouter.put("/updateStatusFeedback/:feedbackId",isAdmin, FeedbackController.updateFeedbackStatus);
 module.exports = FeedbackRouter;
 

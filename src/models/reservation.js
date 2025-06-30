@@ -64,6 +64,7 @@ const reservationSchema = new Schema(
         "PENDING",
         "CANCELLED",
         "NOT PAID",
+        "OFFLINE", // Trạng thái đặt phòng offline
       ],
       default: "PENDING",
     },

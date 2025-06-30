@@ -1,9 +1,33 @@
 const mongoose = require("mongoose");
 const Promotion = require("./src/models/Promotion"); // đường dẫn model
+require('dotenv').config();
 
-mongoose.connect("mongodb://localhost:27017/My_Uroom", {
+// Kiểm tra ENVIRONMENT và chọn MongoDB URI phù hợp
+const getMongoURI = () => {
+  const environment = process.env.ENVIRONMENT || 'development';
+  console.log(`🌍 Environment: ${environment}`);
+  
+  if (environment === 'production') {
+    console.log(`📡 Using Production MongoDB: ${process.env.MONGODB_URI_PRODUCTION}`);
+    return process.env.MONGODB_URI_PRODUCTION;
+  } else {
+    console.log(`💻 Using Development MongoDB: ${process.env.MONGODB_URI_DEVELOPMENT}`);
+    return process.env.MONGODB_URI_DEVELOPMENT;
+  }
+};
+
+const mongoURI = getMongoURI();
+mongoose.connect(mongoURI, {
     useNewUrlParser: true,
     useUnifiedTopology: true
+})
+.then(() => {
+    console.log("✅ MongoDB connected successfully");
+    console.log(`📍 Connected to: ${mongoURI.includes('mongodb+srv') ? 'MongoDB Atlas (Production)' : 'Local MongoDB (Development)'}`);
+})
+.catch((error) => {
+    console.error("❌ MongoDB connection error:", error);
+    process.exit(1);
 });
 
 const promotions = [
