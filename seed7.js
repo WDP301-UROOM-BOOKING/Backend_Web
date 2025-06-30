@@ -44,7 +44,7 @@ const promotions = [
         usageLimit: 100,
         usedCount: 0,
         isActive: true,
-        createdBy: "6669f97c93d37323b0f12345" // giả định một ObjectId
+        createdBy: 1 // Admin user ID
     },
     {
         code: "WELCOME50K",
@@ -58,7 +58,7 @@ const promotions = [
         usageLimit: null,
         usedCount: 20,
         isActive: true,
-        createdBy: "6669f97c93d37323b0f12345"
+        createdBy: 1 // Admin user ID
     },
     {
         code: "FLASH25",
@@ -73,7 +73,7 @@ const promotions = [
         usageLimit: 50,
         usedCount: 3,
         isActive: true,
-        createdBy: "6669f97c93d37323b0f12345"
+        createdBy: 1 // Admin user ID
     },
     {
         code: "EXPIRED2024",
@@ -87,7 +87,7 @@ const promotions = [
         usageLimit: 200,
         usedCount: 200,
         isActive: true,
-        createdBy: "6669f97c93d37323b0f12345"
+        createdBy: 1 // Admin user ID
     },
     {
         code: "INACTIVE15",
@@ -102,16 +102,37 @@ const promotions = [
         usageLimit: 100,
         usedCount: 10,
         isActive: false,
-        createdBy: "6669f97c93d37323b0f12345"
+        createdBy: 1 // Admin user ID
     }
 ];
 
-Promotion.insertMany(promotions)
-    .then(() => {
-        console.log("Dữ liệu promotion đã được chèn thành công.");
+// Hàm seed dữ liệu
+const seedPromotions = async () => {
+    try {
+        // Xóa tất cả dữ liệu promotion cũ
+        console.log("🗑️  Đang xóa tất cả dữ liệu promotion cũ...");
+        const deleteResult = await Promotion.deleteMany({});
+        console.log(`✅ Đã xóa ${deleteResult.deletedCount} promotion cũ`);
+
+        // Thêm dữ liệu mới
+        console.log("📝 Đang thêm dữ liệu promotion mới...");
+        const insertResult = await Promotion.insertMany(promotions);
+        console.log(`✅ Đã thêm ${insertResult.length} promotion mới thành công`);
+
+        // Hiển thị danh sách promotion đã thêm
+        console.log("\n📋 Danh sách promotion đã được thêm:");
+        insertResult.forEach((promo, index) => {
+            console.log(`${index + 1}. ${promo.code} - ${promo.name} (${promo.isActive ? 'Active' : 'Inactive'})`);
+        });
+
+        console.log("\n🎉 Seed dữ liệu promotion hoàn tất!");
         mongoose.disconnect();
-    })
-    .catch(err => {
-        console.error("Lỗi khi chèn dữ liệu:", err);
+    } catch (error) {
+        console.error("❌ Lỗi khi seed dữ liệu:", error);
         mongoose.disconnect();
-    });
+        process.exit(1);
+    }
+};
+
+// Chạy seed function
+seedPromotions();

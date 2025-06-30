@@ -11,11 +11,83 @@ exports.createPromotion = async (req, res) => {
   }
 };
 
-// Get all promotions
+// Get all promotions with pagination
 exports.getAllPromotions = async (req, res) => {
   try {
-    const promotions = await Promotion.find();
-    res.json(promotions);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || '';
+    const status = req.query.status; // 'active', 'inactive', 'expired', 'all'
+    const sortBy = req.query.sortBy || 'createdAt';
+    const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+
+    // Build filter object
+    let filter = {};
+
+    // Search filter
+    if (search) {
+      filter.$or = [
+        { code: { $regex: search, $options: 'i' } },
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Status filter
+    const now = new Date();
+    if (status === 'active') {
+      filter.isActive = true;
+      filter.startDate = { $lte: now };
+      filter.endDate = { $gte: now };
+    } else if (status === 'inactive') {
+      filter.isActive = false;
+    } else if (status === 'expired') {
+      filter.endDate = { $lt: now };
+    }
+
+    // Calculate skip value
+    const skip = (page - 1) * limit;
+
+    // Get total count for pagination
+    const totalPromotions = await Promotion.countDocuments(filter);
+    const totalPages = Math.ceil(totalPromotions / limit);
+
+    // Get promotions with pagination
+    const promotions = await Promotion.find(filter)
+      .sort({ [sortBy]: sortOrder })
+      .skip(skip)
+      .limit(limit);
+
+    // Calculate statistics
+    const stats = {
+      total: await Promotion.countDocuments(),
+      active: await Promotion.countDocuments({
+        isActive: true,
+        startDate: { $lte: now },
+        endDate: { $gte: now }
+      }),
+      inactive: await Promotion.countDocuments({ isActive: false }),
+      expired: await Promotion.countDocuments({ endDate: { $lt: now } })
+    };
+
+    res.json({
+      promotions,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalPromotions,
+        limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      },
+      stats,
+      filters: {
+        search,
+        status,
+        sortBy,
+        sortOrder: req.query.sortOrder || 'desc'
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -55,6 +127,22 @@ exports.deletePromotion = async (req, res) => {
     res.json({ message: 'Promotion deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// Toggle promotion status
+exports.togglePromotionStatus = async (req, res) => {
+  try {
+    const { isActive } = req.body;
+    const updatedPromotion = await Promotion.findByIdAndUpdate(
+      req.params.id,
+      { isActive },
+      { new: true, runValidators: true }
+    );
+    if (!updatedPromotion) return res.status(404).json({ message: 'Promotion not found' });
+    res.json(updatedPromotion);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 };
 
