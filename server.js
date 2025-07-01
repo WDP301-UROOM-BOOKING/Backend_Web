@@ -22,6 +22,7 @@ const ReservationRouter = require("./src/route_controller/Reservations/Reservati
 const RefundingReservationRouter = require("./src/route_controller/RefundingReservation/RefundingReservationRoute");
 const socketHandler = require("./src/route_controller/Socket/socketHandler");
 const MonthlyPaymentRoute = require("./src/route_controller/MonthlyPayment/MonthlyPaymentRoute");
+const DashboardOwnerRoute = require("./src/route_controller/DashboardOwner/DashboardOwnerRoute");
 const morgan = require("morgan");
 const PaymentController = require("./src/route_controller/Payment/PaymentController");
 const port = process.env.PORT || 5000;
@@ -96,6 +97,7 @@ app.use('/api/promotions', promotionRoutes);
 app.use("/api/chat", ChatRoutes);
 app.use("/api/monthly-payment", MonthlyPaymentRoute);
 app.use('/api/notifications', require('./src/route_controller/Notification/NotificationRoute'));
+app.use("/api/dashboard-owner", DashboardOwnerRoute);
 
 const users = new Map(); // lưu trữ userId -> socketId
 
