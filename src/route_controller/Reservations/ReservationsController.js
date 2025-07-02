@@ -42,7 +42,7 @@ exports.getReservationById = async (req, res) => {
     const reservation = await Reservation.findById(reservationId)
       .populate("hotel")
       .populate("rooms.room")
-      .populate("services.service")
+      .populate("services.service");
 
     if (!reservation) {
       return res.status(404).json({
@@ -107,16 +107,10 @@ const autoUpdateNotPaidReservation = asyncHandler(async () => {
       r.status = "CANCELLED";
       // Giảm usedCount của promotion nếu có
       if (r.promotionId) {
-        await Promotion.findByIdAndUpdate(
-          r.promotionId,
-          { $inc: { usedCount: -1 } },
-          { new: true }
-        );
+        await Promotion.findByIdAndUpdate(r.promotionId, { $inc: { usedCount: -1 } }, { new: true });
       }
       await r.save();
-      console.log(
-        `Reservation ${r._id} đã bị hủy do quá 5 phút chưa thanh toán.`
-      );
+      console.log(`Reservation ${r._id} đã bị hủy do quá 5 phút chưa thanh toán.`);
     }
   }
 
@@ -135,11 +129,7 @@ const autoUpdateNotPaidReservation = asyncHandler(async () => {
         await r.save();
         // Giảm usedCount của promotion nếu có
         if (r.promotionId) {
-          await Promotion.findByIdAndUpdate(
-            r.promotionId,
-            { $inc: { usedCount: -1 } },
-            { new: true }
-          );
+          await Promotion.findByIdAndUpdate(r.promotionId, { $inc: { usedCount: -1 } }, { new: true });
         }
         await RefundingReservation.create({
           user: r.user._id,
@@ -152,52 +142,15 @@ const autoUpdateNotPaidReservation = asyncHandler(async () => {
           const result = await roomAvailability.deleteMany({
             reservation: r._id,
           });
-          console.log(
-            `Đã xóa ${result.deletedCount} bản ghi RoomAvailability với reservationId = ${r._id}`
-          );
+          console.log(`Đã xóa ${result.deletedCount} bản ghi RoomAvailability với reservationId = ${r._id}`);
         } catch (error) {
-          console.error(
-            "Lỗi khi xóa RoomAvailability theo reservationId:",
-            error
-          );
+          console.error("Lỗi khi xóa RoomAvailability theo reservationId:", error);
         }
 
-        console.log(
-          `Reservation ${r._id} đã bị hủy do quá 12h trưa ngày check-in.`
-        );
+        console.log(`Reservation ${r._id} đã bị hủy do quá 12h trưa ngày check-in.`);
       }
     } catch (error) {
       console.error(`Lỗi khi xử lý reservation ${r._id}:`, error);
-    }
-  }
-
-  const bookedReservations = await Reservation.find({ status: "BOOKED" });
-  for (const r of bookedReservations) {
-    const checkinDate = new Date(r.checkInDate); // đảm bảo checkinDate là ngày giờ
-    const checkoutDate = new Date(r.checkOutDate); // đảm bảo checkinDate là ngày giờ
-
-    if (now > checkinDate && now < checkoutDate) {
-      r.status = "CHECKED IN";
-      await r.save();
-      console.log(
-        `Reservation ${r._id} đã được chuyển sang trạng thái CHECKED IN.`
-      );
-    }
-  }
-
-  const checkedInReservations = await Reservation.find({
-    status: "CHECKED IN",
-  });
-  for (const r of checkedInReservations) {
-    const checkinDate = new Date(r.checkInDate); // đảm bảo checkinDate là ngày giờ
-    const checkoutDate = new Date(r.checkOutDate); // đảm bảo checkinDate là ngày giờ
-
-    if (now > checkinDate && now > checkoutDate) {
-      r.status = "CHECKED OUT";
-      await r.save();
-      console.log(
-        `Reservation ${r._id} đã được chuyển sang trạng thái CHECKED OUT.`
-      );
     }
   }
 });
@@ -215,24 +168,55 @@ cron.schedule(
   }
 );
 
+const initReservationCronJobs = asyncHandler(async () => {
+  const bookedReservations = await Reservation.find({ status: "BOOKED" });
+  for (const r of bookedReservations) {
+    const checkinDate = new Date(r.checkInDate); // đảm bảo checkinDate là ngày giờ
+    const checkoutDate = new Date(r.checkOutDate); // đảm bảo checkinDate là ngày giờ
+
+    if (now > checkinDate && now < checkoutDate) {
+      r.status = "CHECKED IN";
+      await r.save();
+      console.log(`Reservation ${r._id} đã được chuyển sang trạng thái CHECKED IN.`);
+    }
+  }
+
+  const checkedInReservations = await Reservation.find({
+    status: "CHECKED IN",
+  });
+  for (const r of checkedInReservations) {
+    const checkinDate = new Date(r.checkInDate); // đảm bảo checkinDate là ngày giờ
+    const checkoutDate = new Date(r.checkOutDate); // đảm bảo checkinDate là ngày giờ
+
+    if (now > checkinDate && now > checkoutDate) {
+      r.status = "CHECKED OUT";
+      await r.save();
+      console.log(`Reservation ${r._id} đã được chuyển sang trạng thái CHECKED OUT.`);
+    }
+  }
+});
+
+cron.schedule(
+  "0 0,12 * * *",
+  () => {
+    // autoUpdateReservationStatus();
+    initReservationCronJobs();
+    console.log(`Đã khởi động cron job cho các reservation.`);
+  },
+  {
+    timezone: "Asia/Ho_Chi_Minh",
+  }
+);
+
 exports.updateReservationById = async (req, res) => {
   try {
-    const updated = await Reservation.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    )
+    const updated = await Reservation.findByIdAndUpdate(req.params.id, req.body, { new: true })
       .populate("hotel")
       .populate("rooms.room");
     updated.up;
-    if (!updated)
-      return res
-        .status(404)
-        .json({ error: true, message: "Không tìm thấy đơn đặt phòng." });
+    if (!updated) return res.status(404).json({ error: true, message: "Không tìm thấy đơn đặt phòng." });
 
-    res
-      .status(200)
-      .json({ error: false, message: "Cập nhật thành công.", data: updated });
+    res.status(200).json({ error: false, message: "Cập nhật thành công.", data: updated });
   } catch (err) {
     console.error("Lỗi cập nhật:", err);
     res.status(500).json({ error: true, message: "Lỗi server." });

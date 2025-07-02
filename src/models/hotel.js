@@ -106,6 +106,10 @@ const hotelSchema = new Schema(
       type: String,
       default: "11:00",
     },
+    paymenAmount: {
+      type: Number,
+      default: 0,
+    },
   },
   { versionKey: false }
 );

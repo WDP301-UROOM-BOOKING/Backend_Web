@@ -28,6 +28,27 @@ const monthlyPaymentSchema = new Schema(
       enum: ['PENDING', 'PAID'], 
       default: 'PENDING' 
     },
+    reason: {
+      type: String,
+      default: null
+    },
+    accountHolderName: {
+      type: String,
+    },
+    accountNumber: {
+      type: String,
+    },
+    bankName: {
+      type: String,
+    },
+    branchName: {
+      type: String,
+      default: null
+    },
+    requestDate: {
+      type: Date,
+      default: Date.now,
+    },
     paymentDate: {
       type: Date,
       default: null

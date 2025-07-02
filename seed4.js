@@ -36,6 +36,10 @@ async function seedMonthlyPayments() {
           month,
           amount: 0,
           paymentCount: 0,
+          accountHolderName: "Le Kim Hoang Nguyen",
+          accountNumber: "123456789",
+          bankName: "Vietcombank",
+          branchName: "Vietcombank Branch",
         };
       }
       monthlyMap[key].amount += reservation.totalPrice || 0;

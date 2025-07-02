@@ -25,19 +25,57 @@ exports.createBooking = asyncHandler(async (req, res) => {
     roomDetails,
     serviceDetails,
     totalPrice,
-    finalPrice, // nhận thêm finalPrice
-    promotionId, // nhận thêm promotionId
-    promotionDiscount // nhận thêm promotionDiscount
+    finalPrice,
+    promotionId,
+    promotionDiscount
   } = req.body.params;
 
-  console.log("roomdetails: ", roomDetails);
-
-  console.log("serviceDetails: ", serviceDetails);
+  console.log("roomDetails: ", roomDetails);
   try {
     if (!user._id || !hotelId || !checkInDate || !checkOutDate) {
       return res
         .status(400)
         .json({ error: true, message: "Missing required fields" });
+    }
+
+    // Validate rooms are ACTIVE
+    if (roomDetails && roomDetails.length > 0) {
+      for (let roomDetail of roomDetails) {
+        const room = await Room.findById(roomDetail.room._id);
+        console.log("roomDetail: ", roomDetail);
+        console.log("room: ", room);
+        if (!room) {
+          return res.status(404).json({
+            error: true,
+            message: `Room with ID ${roomDetail.room._id} not found`
+          });
+        }
+        if (room.statusActive !== "ACTIVE") {
+          return res.status(400).json({
+            error: true,
+            message: `Room "${room.name}" is not available (status: ${room.statusActive})`
+          });
+        }
+      }
+    }
+
+    // Validate services are ACTIVE
+    if (serviceDetails && serviceDetails.length > 0) {
+      for (let serviceDetail of serviceDetails) {
+        const service = await HotelService.findById(serviceDetail._id);
+        if (!service) {
+          return res.status(404).json({
+            error: true,
+            message: `Service with ID ${serviceDetail._id} not found`
+          });
+        }
+        if (service.statusActive !== "ACTIVE") {
+          return res.status(400).json({
+            error: true,
+            message: `Service "${service.name}" is not available (status: ${service.statusActive})`
+          });
+        }
+      }
     }
 
     const checkIn = new Date(checkInDate);
@@ -506,7 +544,7 @@ exports.acceptPayment = asyncHandler(async (req, res) => {
     }
 
     if (reservation.status === "NOT PAID") {
-      reservation.status = "PENDING";
+      reservation.status = "BOOKED";
       reservation.save();
     }
 
@@ -576,22 +614,17 @@ exports.createBookingOffline = asyncHandler(async (req, res) => {
     roomDetails,
     serviceDetails,
     totalPrice,
-    finalPrice, // nhận thêm finalPrice
-    promotionId, // nhận thêm promotionId
-    promotionDiscount // nhận thêm promotionDiscount
+    finalPrice,
+    promotionId,
+    promotionDiscount
   } = req.body.params;
 
-  console.log("roomdetails: ", roomDetails);
-  console.log("serviceDetails: ", serviceDetails);
-  
   try {
     if (!user._id || !hotelId || !checkInDate || !checkOutDate) {
       return res
         .status(400)
         .json({ error: true, message: "Missing required fields" });
     }
-
-    console.log("0")
     const checkIn = new Date(checkInDate);
     const checkOut = new Date(checkOutDate);
 
@@ -641,7 +674,6 @@ exports.createBookingOffline = asyncHandler(async (req, res) => {
       console.log("maxBookedQuantity: ", maxBookedQuantity);
       console.log("requested quantity: ", room.amount);
 
-      console.log('1')
       // Check if the requested amount exceeds available capacity
       if (room.amount > roomFind.quantity - maxBookedQuantity) {
         return res.status(400).json({

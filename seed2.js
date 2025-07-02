@@ -901,6 +901,7 @@ for (let i = 0; i < 60; i++) {
       checkOutStart: "10:00",
       checkOutEnd: "11:00",
       ownerStatus: "ACTIVE",
+      paymentAmount: 0,
     });
 
     hotelIds.push(hotel.insertedId);
@@ -995,6 +996,7 @@ for (let i = 0; i < hotelNames.length; i++) {
       checkOutStart: "10:00",
       checkOutEnd: "11:00",
       ownerStatus: "ACTIVE",
+      paymenAmount: 0,
     });
 
     hotelIds.push(hotel.insertedId);
@@ -1047,12 +1049,11 @@ const reservationStatuses = [
   "COMPLETED", // Hoàn thành, đã phản hồi
   "BOOKED", // Đã đặt, trả tiền nhưng chưa check-in
   "CHECKED IN", // Đang ở, đã check-in
-  "PENDING", // Chờ xử lý hoặc xác nhận
   "CANCELLED", // Đã hủy
   // "NOT PAID", // Chưa trả tiền
 ];
 
-for (let i = 0; i < 1000; i++) {
+for (let i = 0; i < 5000; i++) {
   let randomStatus =
     reservationStatuses[Math.floor(Math.random() * reservationStatuses.length)];
 
@@ -1073,11 +1074,10 @@ for (let i = 0; i < 1000; i++) {
 
   // Tạo ngày createdAt ngẫu nhiên trong quá khứ
   let createdAt = new Date(now);
-  createdAt.setDate(now.getDate() - Math.floor(Math.random() * 100 + 40));
+  createdAt.setDate(now.getDate() - Math.floor(Math.random() * 100 + 10));
 
   switch (randomStatus) {
     case "BOOKED":
-    case "PENDING":
     case "CANCELLED":
     case "NOT PAID":
       checkInDate = new Date(now);
