@@ -9,19 +9,13 @@ const asyncHandler = require("../../middlewares/asyncHandler");
 
 // Admin Dashboard Metrics
 const getDashboardMetricsAdmin = asyncHandler(async (req, res) => {
-  const { period = "month" } = req.query;
+  const { period = "month", year } = req.query;
   
   // Calculate date range based on period
   const now = new Date();
   let startDate;
   
   switch (period) {
-    case "day":
-      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      break;
-    case "week":
-      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      break;
     case "month":
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
       break;
@@ -68,29 +62,103 @@ const getDashboardMetricsAdmin = asyncHandler(async (req, res) => {
       createdAt: { $gte: startDate, $lte: now }
     });
     
-    // Calculate total revenue from completed reservations
-    const totalRevenue = completedReservations.reduce((sum, reservation) => {
-      return sum + (reservation.finalPrice || reservation.totalPrice || 0);
-    }, 0);
+    // Calculate total revenue using MonthlyPayment for the period (in USD)
+    let totalRevenue = 0;
+
+    // Get all MonthlyPayment data to find available periods
+    const allMonthlyPayments = await MonthlyPayment.find({});
+    console.log("Total MonthlyPayment records:", allMonthlyPayments.length);
+
+    if (period === 'year') {
+      // For year: sum all monthly payments in the year (both PAID and PENDING)
+      const yearlyPayments = await MonthlyPayment.find({
+        year: now.getFullYear()
+      });
+      totalRevenue = yearlyPayments.reduce((sum, payment) => {
+        return sum + (payment.amount || 0);
+      }, 0);
+
+      // If no data for current year, try previous year or use all available data
+      if (totalRevenue === 0) {
+        const allYearlyPayments = await MonthlyPayment.find({});
+        totalRevenue = allYearlyPayments.reduce((sum, payment) => {
+          return sum + (payment.amount || 0);
+        }, 0);
+        console.log("Using all available MonthlyPayment data for year:", totalRevenue);
+      }
+    } else {
+      // For month: try current month first, then any available month
+      let monthlyPayments = await MonthlyPayment.find({
+        month: now.getMonth() + 1,
+        year: now.getFullYear()
+      });
+
+      // If no data for current month, get the most recent month with data
+      if (monthlyPayments.length === 0) {
+        const latestPayment = await MonthlyPayment.findOne({}).sort({ year: -1, month: -1 });
+        if (latestPayment) {
+          monthlyPayments = await MonthlyPayment.find({
+            month: latestPayment.month,
+            year: latestPayment.year
+          });
+          console.log(`Using data from ${latestPayment.month}/${latestPayment.year} instead of current month`);
+        }
+      }
+
+      totalRevenue = monthlyPayments.reduce((sum, payment) => {
+        return sum + (payment.amount || 0);
+      }, 0);
+    }
+
+    // If still no MonthlyPayment data, fallback to reservation-based calculation
+    if (totalRevenue === 0) {
+      console.log("No MonthlyPayment data found, using reservation fallback");
+      totalRevenue = completedReservations.reduce((sum, reservation) => {
+        return sum + (reservation.finalPrice || reservation.totalPrice || 0);
+      }, 0);
+      console.log("Fallback revenue from reservations:", totalRevenue);
+    } else {
+      console.log("Revenue from MonthlyPayment:", totalRevenue);
+    }
     
     // Get pending reports count
     const pendingReports = await ReportedFeedback.countDocuments({
       status: "PENDING"
     });
+
+    // Get total users count (customers)
+    const totalUsers = await User.countDocuments({
+      role: "CUSTOMER"
+    });
     
-    // Get detailed hotel distribution by location with better categorization
+    // Get detailed hotel distribution by location - extract last part of address for better matching
     const detailedHotelsByLocation = await Hotel.aggregate([
       { $match: { adminStatus: { $ne: 'REJECTED' } } },
+      {
+        $addFields: {
+          // Extract last part from address (after last comma) for better matching
+          addressSuffix: {
+            $trim: {
+              input: {
+                $arrayElemAt: [
+                  { $split: [{ $toLower: "$address" }, ","] },
+                  -1
+                ]
+              }
+            }
+          }
+        }
+      },
       {
         $group: {
           _id: {
             $switch: {
               branches: [
-                { case: { $regexMatch: { input: "$location", regex: /hà nội|hải phòng|quảng ninh|thái nguyên|lào cai|điện biên|sơn la|hòa bình|phú thọ|vĩnh phúc|bắc ninh|bắc giang|hưng yên|hải dương|nam định|thái bình|ninh bình/i } }, then: "Miền Bắc" },
-                { case: { $regexMatch: { input: "$location", regex: /thanh hóa|nghệ an|hà tĩnh|quảng bình|quảng trị|thừa thiên huế|đà nẵng|quảng nam|quảng ngãi/i } }, then: "Miền Trung" },
-                { case: { $regexMatch: { input: "$location", regex: /tp\.hcm|hồ chí minh|bình dương|đồng nai|bà rịa|tây ninh|bình phước|long an|tiền giang|bến tre|vĩnh long|trà vinh|cần thơ|an giang|kiên giang|cà mau|bạc liêu|sóc trăng|hậu giang|đồng tháp/i } }, then: "Miền Nam" },
-                { case: { $regexMatch: { input: "$location", regex: /đà lạt|lâm đồng|đắk lắk|đắk nông|gia lai|kon tum/i } }, then: "Tây Nguyên" },
-                { case: { $regexMatch: { input: "$location", regex: /nha trang|khánh hòa|bình thuận|ninh thuận|phú yên|vũng tàu|phan thiết|mũi né|hạ long|sapa|phú quốc/i } }, then: "Khu du lịch" }
+                { case: { $regexMatch: { input: "$addressSuffix", regex: /hà nội|hải phòng|quảng ninh|thái nguyên|lào cai|điện biên|sơn la|hòa bình|phú thọ|vĩnh phúc|bắc ninh|bắc giang|hưng yên|hải dương|nam định|thái bình|ninh bình|hanoi|hai phong|quang ninh|thai nguyen|lao cai|dien bien|son la|hoa binh|phu tho|vinh phuc|bac ninh|bac giang|hung yen|hai duong|nam dinh|thai binh|ninh binh|thành phố hà nội|thanh pho ha noi/i } }, then: "Miền Bắc" },
+                { case: { $regexMatch: { input: "$addressSuffix", regex: /thanh hóa|nghệ an|hà tĩnh|quảng bình|quảng trị|thừa thiên huế|đà nẵng|quảng nam|quảng ngãi|thanh hoa|nghe an|ha tinh|quang binh|quang tri|thua thien hue|da nang|quang nam|quang ngai|hue|danang|thành phố đà nẵng|thanh pho da nang/i } }, then: "Miền Trung" },
+                { case: { $regexMatch: { input: "$addressSuffix", regex: /tp\.hcm|hồ chí minh|bình dương|đồng nai|bà rịa|tây ninh|bình phước|long an|tiền giang|bến tre|vĩnh long|trà vinh|cần thơ|an giang|kiên giang|cà mau|bạc liêu|sóc trăng|hậu giang|đồng tháp|ho chi minh|saigon|binh duong|dong nai|ba ria|tay ninh|binh phuoc|long an|tien giang|ben tre|tra vinh|vinh long|dong thap|an giang|kien giang|can tho|hau giang|soc trang|bac lieu|ca mau|hcm|tphcm|sài gòn|thành phố hồ chí minh|thanh pho ho chi minh/i } }, then: "Miền Nam" },
+                { case: { $regexMatch: { input: "$addressSuffix", regex: /đà lạt|lâm đồng|đắk lắk|đắk nông|gia lai|kon tum|da lat|lam dong|dak lak|dak nong|gia lai|kon tum|dalat|thành phố đà lạt|thanh pho da lat/i } }, then: "Tây Nguyên" },
+                { case: { $regexMatch: { input: "$addressSuffix", regex: /nha trang|khánh hòa|bình thuận|ninh thuận|phú yên|vũng tàu|phan thiết|mũi né|hạ long|sapa|phú quốc|khanh hoa|binh thuan|ninh thuan|phu yen|vung tau|phan thiet|mui ne|ha long|sapa|phu quoc|phuquoc|halong|hoian|hoi an|thành phố nha trang|thanh pho nha trang|thành phố vũng tàu|thanh pho vung tau/i } }, then: "Khu du lịch" }
               ],
               default: "Khác"
             }
@@ -145,25 +213,55 @@ const getDashboardMetricsAdmin = asyncHandler(async (req, res) => {
     .sort({ requestDate: -1 })
     .select('name owner location rating requestDate adminStatus images');
 
-    // Get revenue data for chart (last 12 months)
+    // Get revenue data for chart based on period
     const revenueData = [];
     const labels = [];
-    
-    for (let i = 11; i >= 0; i--) {
-      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
-      
-      const monthlyReservations = await Reservation.find({
-        status: "COMPLETED",
-        createdAt: { $gte: monthStart, $lte: monthEnd }
-      });
-      
-      const monthlyRevenue = monthlyReservations.reduce((sum, reservation) => {
-        return sum + (reservation.finalPrice || reservation.totalPrice || 0);
-      }, 0);
-      
-      revenueData.push(monthlyRevenue);
-      labels.push(monthStart.toLocaleDateString('vi-VN', { month: 'short' }));
+
+    if (period === 'year') {
+      // For yearly view: show last 5 years including current year
+      const currentYear = now.getFullYear();
+      const years = [];
+      for (let i = 4; i >= 0; i--) {
+        years.push(currentYear - i);
+      }
+
+      for (const year of years) {
+        const yearlyPayments = await MonthlyPayment.find({ year });
+        const yearRevenue = yearlyPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+
+        revenueData.push(yearRevenue);
+        labels.push(`Year ${year}`);
+      }
+      console.log("Using yearly data for chart:", years);
+    } else {
+      // For monthly view: show 12 months of specified year or current year
+      const targetYear = year ? parseInt(year) : now.getFullYear();
+
+      for (let month = 1; month <= 12; month++) {
+        // Try to get MonthlyPayment data first
+        const monthlyPayments = await MonthlyPayment.find({ month, year: targetYear });
+        let monthRevenue = monthlyPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+
+        // If no MonthlyPayment data, fallback to reservations
+        if (monthRevenue === 0) {
+          const monthStart = new Date(targetYear, month - 1, 1);
+          const monthEnd = new Date(targetYear, month, 0);
+
+          const monthlyReservations = await Reservation.find({
+            status: "COMPLETED",
+            createdAt: { $gte: monthStart, $lte: monthEnd }
+          });
+
+          monthRevenue = monthlyReservations.reduce((sum, reservation) => {
+            return sum + (reservation.finalPrice || reservation.totalPrice || 0);
+          }, 0);
+        }
+
+        revenueData.push(monthRevenue);
+        const monthName = new Date(targetYear, month - 1, 1).toLocaleDateString('en-US', { month: 'short' });
+        labels.push(`${monthName} ${targetYear}`);
+      }
+      console.log(`Using monthly data for chart (year ${targetYear})`);
     }
 
     // Format pending hotels for display
@@ -249,10 +347,16 @@ const getDashboardMetricsAdmin = asyncHandler(async (req, res) => {
         })),
 
         // Pending hotels for approval management
-        pendingHotels: formattedPendingHotels
+        pendingHotels: formattedPendingHotels,
+
+        // User statistics for PDF export
+        totalUsers: totalUsers,
+
+        // Available years for dropdown
+        availableYears: await getAvailableYears()
       }
     });
-    
+
   } catch (error) {
     console.error('Error fetching admin dashboard metrics:', error);
     res.status(500).json({
@@ -262,5 +366,40 @@ const getDashboardMetricsAdmin = asyncHandler(async (req, res) => {
     });
   }
 });
+
+// Helper function to get available years
+const getAvailableYears = async () => {
+  try {
+    // Get years from MonthlyPayment
+    const paymentYears = await MonthlyPayment.distinct('year');
+
+    // Get years from Reservations
+    const reservationYears = await Reservation.aggregate([
+      {
+        $group: {
+          _id: { $year: "$createdAt" }
+        }
+      },
+      {
+        $project: {
+          year: "$_id"
+        }
+      }
+    ]);
+
+    // Combine and deduplicate years
+    const allYears = [...new Set([
+      ...paymentYears,
+      ...reservationYears.map(item => item.year),
+      new Date().getFullYear() // Always include current year
+    ])];
+
+    // Sort years in descending order
+    return allYears.sort((a, b) => b - a);
+  } catch (error) {
+    console.error("Error getting available years:", error);
+    return [new Date().getFullYear()]; // Fallback to current year
+  }
+};
 
 exports.getDashboardMetricsAdmin = getDashboardMetricsAdmin;
