@@ -2,7 +2,7 @@ const Reservation = require("../../models/reservation");
 const RefundingReservation = require("../../models/refundingReservation");
 const Promotion = require("../../models/Promotion");
 const cron = require("node-cron");
-const asyncHandler = require("../../middlewares/asyncHandler");
+const asyncHandler= require('express-async-handler');
 const roomAvailability = require("../../models/roomAvailability");
 
 exports.getReservationsByUserId = async (req, res) => {
@@ -169,6 +169,7 @@ cron.schedule(
 );
 
 const initReservationCronJobs = asyncHandler(async () => {
+  const now = new Date();
   const bookedReservations = await Reservation.find({ status: "BOOKED" });
   for (const r of bookedReservations) {
     const checkinDate = new Date(r.checkInDate); // đảm bảo checkinDate là ngày giờ

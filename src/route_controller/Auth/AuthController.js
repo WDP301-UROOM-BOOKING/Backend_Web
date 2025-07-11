@@ -1,5 +1,5 @@
 const generateToken = require("../../utils/generateToken");
-const { cloudinary } = require("../../config/cloudinaryConfig");
+const cloudinary = require("../../config/cloudinaryConfig");
 const bcrypt = require("bcryptjs");
 const User = require("../../models/user");
 const generateVerificationToken = require("../../utils/generateVerificationToken");
@@ -424,42 +424,103 @@ exports.resendVerificationCode = async (req, res) => {
 };
 
 exports.updateAvatar = async (req, res) => {
-  console.log("Uploaded file (multer):", req.file);
-
   try {
+    console.log("=== UPDATE AVATAR DEBUG ===");
+    console.log("File received:", req.file);
+    console.log("Cloudinary object:", typeof cloudinary);
+    console.log("Cloudinary uploader:", typeof cloudinary.uploader);
+
     const userId = req.user._id;
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ MsgNo: "User not found" });
 
-    // Xoá ảnh cũ nếu có
-    if (user.image && user.image.public_ID) {
-      await cloudinary.uploader.destroy(user.image.public_ID);
+    // Debug cloudinary object
+    if (!cloudinary || !cloudinary.uploader) {
+      console.error("❌ Cloudinary not properly configured!");
+      return res.status(500).json({
+        error: true,
+        message: "Cloudinary configuration error"
+      });
     }
 
-    // Upload ảnh mới lên Cloudinary
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      folder: `avatar_${userId}`, // tùy chọn: upload vào thư mục riêng
-      public_id: `avatar_${userId}`, // Đảm bảo tên tệp duy nhất
-      resource_type: "image",
+    // Check if file is provided
+    if (!req.file) {
+      console.log("No file provided");
+      return res.status(400).json({
+        error: true,
+        message: "Vui lòng chọn ảnh avatar"
+      });
+    }
+
+    // Check if user exists
+    if (!user) {
+      return res.status(404).json({
+        error: true,
+        message: "User not found"
+      });
+    }
+
+    console.log("Starting upload to Cloudinary...");
+
+    try {
+      // Delete old image if exists
+      if (user.image && user.image.public_ID) {
+        console.log("Deleting old avatar:", user.image.public_ID);
+        await cloudinary.uploader.destroy(user.image.public_ID);
+      }
+
+      // Convert buffer to base64
+      const fileBuffer = req.file.buffer;
+      const fileBase64 = `data:${req.file.mimetype};base64,${fileBuffer.toString('base64')}`;
+
+      // Upload to Cloudinary
+      console.log("Uploading new avatar...");
+      const result = await cloudinary.uploader.upload(fileBase64, {
+        folder: "avatars",
+        public_id: `avatar_${userId}_${Date.now()}`,
+        transformation: [
+          { width: 500, height: 500, crop: "fill" },
+          { quality: "auto" }
+        ]
+      });
+
+      console.log("✅ Avatar uploaded successfully:", result.public_id);
+
+      // Update user's image data
+      user.image = {
+        public_ID: result.public_id,
+        url: result.secure_url
+      };
+
+      await user.save();
+
+      console.log("🎉 Avatar update completed!");
+      console.log("=== END UPDATE AVATAR DEBUG ===");
+
+      return res.status(200).json({
+        error: false,
+        message: "Avatar updated successfully",
+        Data: {
+          image: user.image,
+          MsgYes: "Avatar updated successfully"
+        }
+      });
+
+    } catch (uploadError) {
+      console.error("❌ Error uploading avatar:", uploadError);
+      return res.status(500).json({
+        error: true,
+        message: "Failed to upload avatar",
+        details: uploadError.message
+      });
+    }
+
+  } catch (error) {
+    console.error("❌ Error updating avatar:", error);
+    return res.status(500).json({
+      error: true,
+      message: "Internal server error",
+      details: error.message
     });
-
-    const newImage = {
-      public_ID: result.public_id, // không có .jpg/.png, ví dụ: "avatars/xyz123"
-      url: result.secure_url, // URL chính thức từ Cloudinary
-    };
-
-    user.image = newImage;
-    await user.save();
-
-    res.json({
-      Data: {
-        MsgYes: "Avatar updated successfully",
-        image: newImage,
-      },
-    });
-  } catch (err) {
-    console.error("Update avatar error:", err);
-    res.status(500).json({ MsgNo: "Server error" });
   }
 };
 
