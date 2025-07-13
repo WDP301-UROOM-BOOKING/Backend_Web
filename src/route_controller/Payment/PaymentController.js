@@ -8,6 +8,7 @@ const room = require("../../models/room");
 const HotelService = require("../../models/hotelService");
 const stripe = require("stripe")(process.env.STRIPE_API_KEY);
 const Promotion = require("../../models/Promotion"); 
+const RefundingReservation = require("../../models/refundingReservation")
 
 // Constants for booking statuses and messages
 const COMPLETED_BOOKING_STATUS = "COMPLETED"; 
@@ -184,13 +185,9 @@ exports.createBooking = asyncHandler(async (req, res) => {
       }
       // Find the maximum booked quantity for any day in the range
       for (const bookedQuantity of dateMap.values()) {
-        console.log("bookedQuantity >> ", bookedQuantity);
         maxBookedQuantity = Math.max(maxBookedQuantity, bookedQuantity);
       }
 
-      console.log("roomFind quantity: ", roomFind.quantity);
-      console.log("maxBookedQuantity: ", maxBookedQuantity);
-      console.log("requested quantity: ", room.amount);
 
       // Check if the requested amount exceeds available capacity
       if (room.amount > roomFind.quantity - maxBookedQuantity) {
@@ -386,52 +383,43 @@ async function confirmPayment(event) {
   console.log("payment success");
   const session = event.data.object;
   const reservationId = session.metadata.reservationId;
+  const paymentIntentId = session.payment_intent; // 🟢 Stripe gửi payment_intent ở đây
 
   try {
-    const reservation = await Reservation.findById(reservationId).populate(
-      "user"
-    ); // Populate user to get email
+    const reservation = await Reservation.findById(reservationId).populate("user");
+
     if (!reservation) {
-      throw new Error(NOT_FOUND_RESERVATION_MESSAGE);
+      throw new Error("Reservation not found");
     }
 
-    // phần code thay đoỉ sau khi thanh toán
-    reservation.status = COMPLETED_BOOKING_STATUS;
+    // ✅ Lưu trạng thái và paymentIntentId
+    reservation.status = "BOOKED";
+    reservation.paymentIntentId = paymentIntentId;
     await reservation.save();
 
-    // Send email confirmation
+    // Gửi email như trước
     if (reservation.user && reservation.user.email) {
-      const userEmailConfirmedBooking = reservation.user.email;
-      // Assuming you have a utility function to build the booking response for the email
-      // and a sendEmail service
-      const subject = "Booking Confirmed!"; // Use a constant or define appropriately
-      const bookingDetailsForEmail = {
-        // Simplified for example, adjust based on your needs
+      const userEmail = reservation.user.email;
+      const subject = "Booking Confirmed!";
+      const bookingDetails = {
         hotelName: reservation.hotel.hotelName,
-        totalPrice: reservation.finalPrice || reservation.totalPrice, // ưu tiên finalPrice nếu có
-        // Add other relevant details
+        totalPrice: reservation.finalPrice || reservation.totalPrice,
       };
       await sendEmail(
-        userEmailConfirmedBooking,
+        userEmail,
         subject,
-        `Your booking for ${bookingDetailsForEmail.hotelName} has been confirmed. Total price: $${bookingDetailsForEmail.totalPrice}.`
+        `Your booking for ${bookingDetails.hotelName} has been confirmed. Total price: $${bookingDetails.totalPrice}.`
       );
     } else {
-      console.warn(
-        `User email not found for reservation ID: ${reservationId}. Cannot send confirmation email.`
-      );
+      console.warn(`User email not found for reservation ID: ${reservationId}`);
     }
 
-    console.log(`Reservation ${reservationId} confirmed successfully.`);
+    console.log(`Reservation ${reservationId} confirmed and paymentIntentId saved.`);
   } catch (error) {
-    console.error(
-      `Error confirming payment for reservation ${reservationId}:`,
-      error.message
-    );
-    // You might want to log this error to a more robust logging system or
-    // implement a retry mechanism for failed email sending.
+    console.error(`Error confirming payment for reservation ${reservationId}:`, error.message);
   }
 }
+
 
 // async function cancelPayment(event) {
 //   console.log('payment cancel')
@@ -734,4 +722,75 @@ exports.createBookingOffline = asyncHandler(async (req, res) => {
     });
   }
 });
+
+// thinh create refunding START 12/07/2025
+  exports.handleStripeRefund = asyncHandler(async (req, res) => {
+  const { refundId } = req.params;
+  // 1. Tìm yêu cầu hoàn tiền và populate reservation
+  const refundRequest = await RefundingReservation.findById(refundId).populate("reservation");
+  if (!refundRequest) {
+    return res.status(404).json({ message: "Refund request not found" });
+  }
+
+  const reservation = refundRequest.reservation;
+  if (!reservation || !reservation.paymentIntentId) {
+    return res.status(400).json({ message: "Missing or invalid reservation/paymentIntentId" });
+  }
+
+  // 2. Chỉ xử lý nếu trạng thái là APPROVED
+  //if (refundRequest.status !== "APPROVED") {
+   // return res.status(400).json({
+      //message: `Refund request must be APPROVED before processing. Current status: ${refundRequest.status}`,
+    //});
+ // }
+
+  try {
+    // 3. Thực hiện hoàn tiền trên Stripe
+    const stripeRefund = await stripe.refunds.create({
+      payment_intent: reservation.paymentIntentId,
+      amount: Math.round(refundRequest.refundAmount * 100), // cents
+      reason: "requested_by_customer",
+    });
+
+    // 4. Cập nhật trạng thái
+    refundRequest.status = "APPROVED";
+    refundRequest.stripeRefundId = stripeRefund.id; // Gợi ý: thêm vào schema nếu chưa có
+    await refundRequest.save();
+
+
+    return res.status(200).json({
+      message: "Refund processed successfully via Stripe",
+      refund: {
+        refundId: refundRequest._id,
+        amount: refundRequest.refundAmount,
+        status: refundRequest.status,
+        stripeRefundId: stripeRefund.id,
+        stripeStatus: stripeRefund.status,
+      },
+    });
+  } catch (err) {
+    console.error("Stripe refund error:", err);
+    return res.status(500).json({ message: "Stripe refund failed", error: err.message });
+  }
+});
+
+exports.getAllRefundingReservations = asyncHandler(async (req, res) => {
+  try {
+    const refunds = await RefundingReservation.find()
+      .populate("user")        // Lấy thông tin cơ bản của user
+      .populate("reservation")               // Lấy thông tin đặt phòng nếu cần
+      .sort({ createdAt: -1 });              // Sắp xếp mới nhất trước
+
+    res.status(200).json({
+      message: "All refund requests fetched successfully",
+      data: refunds,
+    });
+  } catch (err) {
+    console.error("Error fetching all refund requests:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+
+// thinh create refunding END 12/07/2025
 

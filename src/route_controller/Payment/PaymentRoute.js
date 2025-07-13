@@ -4,6 +4,7 @@ const PaymentRouter = express.Router();
 const PaymentController = require("./PaymentController");
 const checkCustomer = require("../../middlewares/checkCustomer");
 const checkOwner = require("../../middlewares/checkOwner");
+const { isAdmin } = require("../../middlewares/checkAdmin")
 // const bodyParser = require("body-parser");
 
 PaymentRouter.post(
@@ -38,4 +39,16 @@ PaymentRouter.post(
   PaymentController.createBookingOffline
 );
 
+// Admin duyệt hoàn tiền và thực hiện refund trên Stripe
+PaymentRouter.post(
+  "/stripe-refund/:refundId",
+  isAdmin,
+  PaymentController.handleStripeRefund
+);
+
+PaymentRouter.get(
+  "/getAllRefund",
+  isAdmin,
+  PaymentController.getAllRefundingReservations
+);
 module.exports = PaymentRouter;

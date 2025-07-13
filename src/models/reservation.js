@@ -90,6 +90,10 @@ const reservationSchema = new Schema(
       type: String,
       default: null,
     },
+    paymentIntentId: {
+      type: String,
+      default: null,
+    },
     createdAt: { type: Date, default: Date.now },
   },
   { timestamps: true, versionKey: false }
