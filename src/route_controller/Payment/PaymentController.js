@@ -70,6 +70,7 @@ exports.createBooking = asyncHandler(async (req, res) => {
           });
         }
         if (service.statusActive !== "ACTIVE") {
+          console.log("service: ", service);
           return res.status(400).json({
             error: true,
             message: `Service "${service.name}" is not available (status: ${service.statusActive})`

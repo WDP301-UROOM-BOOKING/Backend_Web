@@ -14,16 +14,25 @@ async function seedMonthlyPayments() {
       useUnifiedTopology: true,
     });
 
-    // Lấy tất cả reservation COMPLETED
+    // Lấy ngày đầu tháng hiện tại
+    const now = new Date();
+    const currentMonth = now.getMonth(); // 0-11
+    const currentYear = now.getFullYear();
+    const startOfCurrentMonth = new Date(currentYear, currentMonth, 1);
+
+    // Lấy tất cả reservation trước tháng hiện tại
     const completedReservations = await Reservation.find({
-      status: { $in: ["COMPLETED", "CHECKED OUT", "BOOKED", "PENDING", "CHECKED IN"] },
+      status: { $in: ["COMPLETED", "CHECKED OUT", "BOOKED", "PENDING", "CHECKED IN", "OFFINE"] },
+      createdAt: { $lt: startOfCurrentMonth } // Chỉ lấy trước tháng hiện tại
     }).populate("rooms.room");
 
-    console.log("completedReservations: ", completedReservations.length);
+    console.log(`Lấy reservations trước tháng ${currentMonth + 1}/${currentYear}`);
+    console.log("Số lượng reservations: ", completedReservations.length);
+
     // Gom nhóm theo hotel, month, year
     const monthlyMap = {};
     completedReservations.forEach((reservation) => {
-      const date = new Date( reservation.createdAt);
+      const date = new Date(reservation.createdAt);
       const month = date.getMonth() + 1;
       const year = date.getFullYear();
       const hotel = reservation.hotel.toString();
@@ -50,13 +59,18 @@ async function seedMonthlyPayments() {
     const monthlyDocs = Object.values(monthlyMap);
     if (monthlyDocs.length > 0) {
       await MonthlyPayment.insertMany(monthlyDocs);
-      console.log("Seeded monthlyPayments:", monthlyDocs.length);
+      console.log("Đã tạo monthly payments:", monthlyDocs.length);
+      console.log("Chi tiết theo tháng:");
+      monthlyDocs.forEach(doc => {
+        console.log(`- Tháng ${doc.month}/${doc.year}: ${doc.paymentCount} reservations, tổng ${doc.amount.toLocaleString('vi-VN')}đ`);
+      });
     } else {
-      console.log("No COMPLETED reservations found.");
+      console.log("Không tìm thấy reservations trước tháng hiện tại.");
     }
+    
     process.exit(0);
   } catch (err) {
-    console.error(err);
+    console.error("Lỗi:", err);
     process.exit(1);
   }
 }
