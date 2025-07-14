@@ -1,5 +1,5 @@
 const generateToken = require("../../utils/generateToken");
-const cloudinary = require("../../config/cloudinaryConfig");
+const { cloudinary } = require("../../config/cloudinaryConfig");
 const bcrypt = require("bcryptjs");
 const User = require("../../models/user");
 const generateVerificationToken = require("../../utils/generateVerificationToken");
@@ -424,103 +424,42 @@ exports.resendVerificationCode = async (req, res) => {
 };
 
 exports.updateAvatar = async (req, res) => {
-  try {
-    console.log("=== UPDATE AVATAR DEBUG ===");
-    console.log("File received:", req.file);
-    console.log("Cloudinary object:", typeof cloudinary);
-    console.log("Cloudinary uploader:", typeof cloudinary.uploader);
+  console.log("Uploaded file (multer):", req.file);
 
+  try {
     const userId = req.user._id;
     const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ MsgNo: "User not found" });
 
-    // Debug cloudinary object
-    if (!cloudinary || !cloudinary.uploader) {
-      console.error("❌ Cloudinary not properly configured!");
-      return res.status(500).json({
-        error: true,
-        message: "Cloudinary configuration error"
-      });
+    // Xoá ảnh cũ nếu có
+    if (user.image && user.image.public_ID) {
+      await cloudinary.uploader.destroy(user.image.public_ID);
     }
 
-    // Check if file is provided
-    if (!req.file) {
-      console.log("No file provided");
-      return res.status(400).json({
-        error: true,
-        message: "Vui lòng chọn ảnh avatar"
-      });
-    }
-
-    // Check if user exists
-    if (!user) {
-      return res.status(404).json({
-        error: true,
-        message: "User not found"
-      });
-    }
-
-    console.log("Starting upload to Cloudinary...");
-
-    try {
-      // Delete old image if exists
-      if (user.image && user.image.public_ID) {
-        console.log("Deleting old avatar:", user.image.public_ID);
-        await cloudinary.uploader.destroy(user.image.public_ID);
-      }
-
-      // Convert buffer to base64
-      const fileBuffer = req.file.buffer;
-      const fileBase64 = `data:${req.file.mimetype};base64,${fileBuffer.toString('base64')}`;
-
-      // Upload to Cloudinary
-      console.log("Uploading new avatar...");
-      const result = await cloudinary.uploader.upload(fileBase64, {
-        folder: "avatars",
-        public_id: `avatar_${userId}_${Date.now()}`,
-        transformation: [
-          { width: 500, height: 500, crop: "fill" },
-          { quality: "auto" }
-        ]
-      });
-
-      console.log("✅ Avatar uploaded successfully:", result.public_id);
-
-      // Update user's image data
-      user.image = {
-        public_ID: result.public_id,
-        url: result.secure_url
-      };
-
-      await user.save();
-
-      console.log("🎉 Avatar update completed!");
-      console.log("=== END UPDATE AVATAR DEBUG ===");
-
-      return res.status(200).json({
-        error: false,
-        message: "Avatar updated successfully",
-        Data: {
-          image: user.image,
-          MsgYes: "Avatar updated successfully"
-        }
-      });
-
-    } catch (uploadError) {
-      console.error("❌ Error uploading avatar:", uploadError);
-      return res.status(500).json({
-        error: true,
-        message: "Failed to upload avatar",
-        details: uploadError.message
-      });
-    }
-
-  } catch (error) {
-    console.error("❌ Error updating avatar:", error);
-    return res.status(500).json({
-      error: true,
-      message: "Internal server error",
-      details: error.message
+    // Upload ảnh mới lên Cloudinary
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: `avatar_${userId}`, // tùy chọn: upload vào thư mục riêng
+      public_id: `avatar_${userId}`, // Đảm bảo tên tệp duy nhất
+      resource_type: "image",
     });
+
+    const newImage = {
+      public_ID: result.public_id, // không có .jpg/.png, ví dụ: "avatars/xyz123"
+      url: result.secure_url, // URL chính thức từ Cloudinary
+    };
+
+    user.image = newImage;
+    await user.save();
+
+    res.json({
+      Data: {
+        MsgYes: "Avatar updated successfully",
+        image: newImage,
+      },
+    });
+  } catch (err) {
+    console.error("Update avatar error:", err);
+    res.status(500).json({ MsgNo: "Server error" });
   }
 };
 
@@ -679,9 +618,27 @@ exports.getAllCustomers = async (req, res) => {
 
 exports.lockCustomer = async (req, res) => {
   try {
+    const { reasonLocked, lockDuration } = req.body;
+    // Xác định thời gian lock
+    let lockExpiresAt = null;
+    let durationText = lockDuration;
+    if (lockDuration && lockDuration !== "permanent") {
+      const days = parseInt(lockDuration, 10);
+      if (!isNaN(days)) {
+        lockExpiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+      }
+    }
+    const updateFields = {
+      isLocked: true,
+      status: "LOCK",
+      reasonLocked: reasonLocked || "Violation of standards",
+      dateLocked: new Date(),
+      lockDuration: durationText || null,
+      lockExpiresAt: lockExpiresAt || null,
+    };
     const user = await require("../../models/user").findByIdAndUpdate(
       req.params.id,
-      { isLocked: true, status: "LOCK" },
+      updateFields,
       { new: true }
     );
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
@@ -693,9 +650,17 @@ exports.lockCustomer = async (req, res) => {
 
 exports.unlockCustomer = async (req, res) => {
   try {
+    const updateFields = {
+      isLocked: false,
+      status: "ACTIVE",
+      lockDuration: null,
+      lockExpiresAt: null,
+      reasonLocked: "",
+      dateLocked: null,
+    };
     const user = await require("../../models/user").findByIdAndUpdate(
       req.params.id,
-      { isLocked: false, status: "ACTIVE" },
+      updateFields,
       { new: true }
     );
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
@@ -707,14 +672,48 @@ exports.unlockCustomer = async (req, res) => {
 // Thinh update manage hotel owner START 25/06/2025
 exports.getAllOwners = async (req, res) => {
   try {
-    const owners = await User.find({ role: "OWNER" });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const User = require("../../models/user");
+    const query = { role: "OWNER" };
+    if (req.query.status) query.status = req.query.status;
+    if (req.query.search) {
+      const searchRegex = new RegExp(req.query.search, "i");
+      query.$or = [
+        { name: searchRegex },
+        { email: searchRegex },
+        { phoneNumber: searchRegex }
+      ];
+    }
+    // Sắp xếp
+    let sort = {};
+    if (req.query.sort === 'name') sort = { name: 1 };
+    if (req.query.sort === 'createdAt') sort = { createdAt: -1 };
+    // Lấy danh sách owner
+    const [owners, total] = await Promise.all([
+      User.find(query).sort(sort).skip(skip).limit(limit),
+      User.countDocuments(query)
+    ]);
+    // Đếm số khách sạn thực sự cho từng owner
+    let ownersWithHotelCount = await Promise.all(owners.map(async (user) => {
+      const hotelCount = user.ownedHotels ? user.ownedHotels.length : 0;
+      return { ...user.toObject(), hotelCount };
+    }));
+    // Sắp xếp lại theo hotelCount nếu cần
+    if (req.query.sort === 'hotelCount') {
+      ownersWithHotelCount = ownersWithHotelCount.sort((a, b) => b.hotelCount - a.hotelCount);
+    }
     res.json({
-      MsgYes: "Fetched all owners successfully",
-      Data: owners,
+      success: true,
+      data: ownersWithHotelCount,
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
     });
   } catch (error) {
-    console.error("Get all owners error:", error);
-    res.status(500).json({ MsgNo: "Internal server error" });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -794,3 +793,25 @@ exports.deleteOwner = async (req, res) => {
 };
 
 // Thinh update manage hotel owner END 25/06/2025
+
+// Middleware tự động unlock nếu hết hạn lock
+exports.autoUnlockIfExpired = async (req, res, next) => {
+  try {
+    const userId = req.user?._id || req.params.id;
+    if (!userId) return next();
+    const User = require("../../models/user");
+    const user = await User.findById(userId);
+    if (user && user.isLocked && user.lockExpiresAt && user.lockExpiresAt < new Date()) {
+      user.isLocked = false;
+      user.status = "ACTIVE";
+      user.lockDuration = null;
+      user.lockExpiresAt = null;
+      user.reasonLocked = "";
+      user.dateLocked = null;
+      await user.save();
+    }
+    next();
+  } catch (err) {
+    next();
+  }
+};

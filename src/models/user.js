@@ -90,6 +90,16 @@ const UserSchema = new Schema(
       type: String,
       default: "Violation of standards",
     },
+    lockDuration: {
+      // Số ngày bị lock hoặc 'permanent'
+      type: String,
+      default: null,
+    },
+    lockExpiresAt: {
+      // Ngày hết hạn lock (nếu có)
+      type: Date,
+      default: null,
+    },
     dateLocked: {
       type: Date,
       default: () => new Date(),
