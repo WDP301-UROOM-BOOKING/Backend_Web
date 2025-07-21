@@ -22,8 +22,10 @@ exports.getAllPromotions = async (req, res) => {
     const sortBy = req.query.sortBy || 'createdAt';
     const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
 
-    // Build filter object
-    let filter = {};
+    // Build filter object for public promotions
+    let filter = {
+      type: 'PUBLIC' // Public promotions hiển thị cho tất cả user
+    };
 
     // Search filter
     if (search) {
@@ -63,13 +65,30 @@ exports.getAllPromotions = async (req, res) => {
       .skip(skip)
       .limit(limit);
 
-    // Add user usage information if user is authenticated
-    let promotionsWithUsage = promotions;
+    // Add user usage information and claimed promotions if user is authenticated
+    let allPromotions = [...promotions];
     const userId = req.user?._id;
 
     if (userId) {
+      // Get user's claimed private promotions (not in public list)
+      const claimedPromotions = await PromotionUser.find({
+        userId: userId,
+        isClaimed: true
+      }).populate('promotionId');
+
+      // Filter claimed private promotions that are not already in public list
+      const claimedPrivatePromotions = claimedPromotions
+        .filter(pu => pu.promotionId &&
+                     pu.promotionId.isActive &&
+                     pu.promotionId.type === 'PRIVATE' &&
+                     !promotions.some(p => p._id.toString() === pu.promotionId._id.toString()))
+        .map(pu => pu.promotionId);
+
+      // Add claimed private promotions to the list
+      allPromotions = [...promotions, ...claimedPrivatePromotions];
+
       // Get user usage for all promotions
-      const promotionIds = promotions.map(p => p._id);
+      const promotionIds = allPromotions.map(p => p._id);
       const userUsages = await PromotionUser.find({
         promotionId: { $in: promotionIds },
         userId: userId
@@ -78,16 +97,43 @@ exports.getAllPromotions = async (req, res) => {
       // Create a map for quick lookup
       const usageMap = {};
       userUsages.forEach(usage => {
-        usageMap[usage.promotionId.toString()] = usage.usedCount;
+        usageMap[usage.promotionId.toString()] = {
+          usedCount: usage.usedCount,
+          isClaimed: usage.isClaimed
+        };
       });
 
-      // Add usage info to promotions
-      promotionsWithUsage = promotions.map(promotion => {
+      // Add usage info to all promotions
+      allPromotions = allPromotions.map(promotion => {
         const promotionObj = promotion.toObject();
-        promotionObj.userUsedCount = usageMap[promotion._id.toString()] || 0;
-        promotionObj.userCanUse = (usageMap[promotion._id.toString()] || 0) < (promotion.maxUsagePerUser || 1);
+        const userUsage = usageMap[promotion._id.toString()];
+        promotionObj.userUsedCount = userUsage?.usedCount || 0;
+        promotionObj.userCanUse = (userUsage?.usedCount || 0) < (promotion.maxUsagePerUser || 1);
+        promotionObj.isClaimed = userUsage?.isClaimed || false;
         return promotionObj;
       });
+
+      // Sort promotions: available first, used up last
+      allPromotions.sort((a, b) => {
+        // First priority: available promotions (userCanUse = true)
+        if (a.userCanUse && !b.userCanUse) return -1;
+        if (!a.userCanUse && b.userCanUse) return 1;
+
+        // Second priority: within same availability, sort by creation date (newest first)
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+    } else {
+      // For non-logged in users, just add default values
+      allPromotions = promotions.map(promotion => {
+        const promotionObj = promotion.toObject();
+        promotionObj.userUsedCount = 0;
+        promotionObj.userCanUse = true;
+        promotionObj.isClaimed = false;
+        return promotionObj;
+      });
+
+      // Sort by creation date (newest first) for non-logged in users
+      allPromotions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
 
     // Calculate statistics
@@ -107,7 +153,7 @@ exports.getAllPromotions = async (req, res) => {
     };
 
     res.json({
-      promotions: promotionsWithUsage,
+      promotions: allPromotions,
       pagination: {
         currentPage: page,
         totalPages,
@@ -205,9 +251,9 @@ exports.applyPromotionCode = async (req, res) => {
       return res.status(400).json({ message: `Minimum order amount is ${promotion.minOrderAmount}` });
     }
 
-    // Kiểm tra giới hạn sử dụng per user nếu user đã đăng nhập
+    // Kiểm tra giới hạn sử dụng per user và auto-claim nếu user đã đăng nhập
     if (userId && promotion.maxUsagePerUser) {
-      const promotionUser = await PromotionUser.findOne({
+      let promotionUser = await PromotionUser.findOne({
         promotionId: promotion._id,
         userId: userId
       });
@@ -216,6 +262,18 @@ exports.applyPromotionCode = async (req, res) => {
         return res.status(400).json({
           message: `You have reached the maximum usage limit (${promotion.maxUsagePerUser}) for this promotion`
         });
+      }
+
+      // Auto-claim promotion if not claimed yet
+      if (!promotionUser) {
+        promotionUser = new PromotionUser({
+          promotionId: promotion._id,
+          userId: userId
+        });
+      }
+
+      if (!promotionUser.isClaimed) {
+        await promotionUser.claimPromotion();
       }
     }
 
@@ -234,6 +292,135 @@ exports.applyPromotionCode = async (req, res) => {
       discount,
       message: 'Promotion applied successfully',
       promotionId: promotion._id
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Claim promotion code
+exports.claimPromotionCode = async (req, res) => {
+  try {
+    const { code } = req.body;
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required to claim promotion' });
+    }
+
+    const promotion = await Promotion.findOne({ code: code.toUpperCase(), isActive: true });
+
+    if (!promotion) return res.status(404).json({ message: 'Invalid or inactive promotion code' });
+
+    const now = new Date();
+    if (now < promotion.startDate || now > promotion.endDate) {
+      return res.status(400).json({ message: 'Promotion is not active at this time' });
+    }
+
+    if (promotion.usageLimit && promotion.usedCount >= promotion.usageLimit) {
+      return res.status(400).json({ message: 'Promotion usage limit exceeded' });
+    }
+
+    // Kiểm tra user đã claim chưa
+    let promotionUser = await PromotionUser.findOne({
+      promotionId: promotion._id,
+      userId: userId
+    });
+
+    if (promotionUser && promotionUser.isClaimed) {
+      return res.status(400).json({
+        message: 'You have already claimed this promotion',
+        promotion: {
+          code: promotion.code,
+          name: promotion.name,
+          claimedAt: promotionUser.claimedAt
+        }
+      });
+    }
+
+    // Tạo hoặc cập nhật PromotionUser record
+    if (!promotionUser) {
+      promotionUser = new PromotionUser({
+        promotionId: promotion._id,
+        userId: userId
+      });
+    }
+
+    await promotionUser.claimPromotion();
+
+    res.json({
+      success: true,
+      message: 'Promotion claimed successfully!',
+      promotion: {
+        code: promotion.code,
+        name: promotion.name,
+        description: promotion.description,
+        discountType: promotion.discountType,
+        discountValue: promotion.discountValue,
+        maxDiscountAmount: promotion.maxDiscountAmount,
+        minOrderAmount: promotion.minOrderAmount,
+        claimedAt: promotionUser.claimedAt,
+        usedCount: promotionUser.usedCount,
+        maxUsagePerUser: promotion.maxUsagePerUser
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get user's claimed promotions
+exports.getClaimedPromotions = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    // Lấy tất cả promotions user đã claim
+    const claimedPromotions = await PromotionUser.find({
+      userId: userId,
+      isClaimed: true
+    }).populate('promotionId');
+
+    // Filter ra những promotion còn active và valid
+    const validClaimedPromotions = claimedPromotions
+      .filter(pu => pu.promotionId && pu.promotionId.isActive)
+      .map(pu => {
+        const promotion = pu.promotionId;
+        const now = new Date();
+        const isValid = now >= promotion.startDate && now <= promotion.endDate;
+        const canUse = pu.usedCount < (promotion.maxUsagePerUser || 1);
+
+        return {
+          _id: promotion._id,
+          code: promotion.code,
+          name: promotion.name,
+          description: promotion.description,
+          discountType: promotion.discountType,
+          discountValue: promotion.discountValue,
+          maxDiscountAmount: promotion.maxDiscountAmount,
+          minOrderAmount: promotion.minOrderAmount,
+          startDate: promotion.startDate,
+          endDate: promotion.endDate,
+          type: promotion.type,
+          // User-specific data
+          claimedAt: pu.claimedAt,
+          usedCount: pu.usedCount,
+          maxUsagePerUser: promotion.maxUsagePerUser,
+          userCanUse: canUse && isValid,
+          isExpired: !isValid,
+          status: !isValid ? 'expired' : !canUse ? 'used_up' : 'available'
+        };
+      });
+
+    res.json({
+      claimedPromotions: validClaimedPromotions,
+      total: validClaimedPromotions.length,
+      available: validClaimedPromotions.filter(p => p.status === 'available').length,
+      used: validClaimedPromotions.filter(p => p.status === 'used_up').length,
+      expired: validClaimedPromotions.filter(p => p.status === 'expired').length
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

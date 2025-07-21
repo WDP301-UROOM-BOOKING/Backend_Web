@@ -26,4 +26,10 @@ router.patch('/:id/status', isAdmin, promotionController.togglePromotionStatus);
 // Apply promotion (Customer only)
 router.post('/apply', checkCustomer, promotionController.applyPromotionCode);
 
+// Claim promotion (Customer only)
+router.post('/claim', checkCustomer, promotionController.claimPromotionCode);
+
+// Get claimed promotions (Customer only)
+router.get('/claimed', checkCustomer, promotionController.getClaimedPromotions);
+
 module.exports = router;

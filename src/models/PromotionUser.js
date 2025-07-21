@@ -17,6 +17,15 @@ const promotionUserSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    // Trạng thái claim promotion
+    isClaimed: {
+      type: Boolean,
+      default: false,
+    },
+    claimedAt: {
+      type: Date,
+      default: null,
+    },
     // Lưu lại thông tin lần sử dụng gần nhất
     lastUsedAt: {
       type: Date,
@@ -43,11 +52,23 @@ promotionUserSchema.methods.canUsePromotion = function(maxUsagePerUser) {
   return this.usedCount < maxUsagePerUser;
 };
 
+// Method để claim promotion
+promotionUserSchema.methods.claimPromotion = function() {
+  this.isClaimed = true;
+  this.claimedAt = new Date();
+  return this.save();
+};
+
 // Method để tăng usage count
 promotionUserSchema.methods.incrementUsage = function(reservationId) {
   this.usedCount += 1;
   this.lastUsedAt = new Date();
   this.lastReservationId = reservationId;
+  // Tự động claim nếu chưa claim
+  if (!this.isClaimed) {
+    this.isClaimed = true;
+    this.claimedAt = new Date();
+  }
   return this.save();
 };
 
