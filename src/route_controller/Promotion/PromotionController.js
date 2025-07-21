@@ -1,4 +1,5 @@
 const Promotion = require('../../models/Promotion');
+const PromotionUser = require('../../models/PromotionUser');
 
 // Create new promotion
 exports.createPromotion = async (req, res) => {
@@ -62,6 +63,33 @@ exports.getAllPromotions = async (req, res) => {
       .skip(skip)
       .limit(limit);
 
+    // Add user usage information if user is authenticated
+    let promotionsWithUsage = promotions;
+    const userId = req.user?._id;
+
+    if (userId) {
+      // Get user usage for all promotions
+      const promotionIds = promotions.map(p => p._id);
+      const userUsages = await PromotionUser.find({
+        promotionId: { $in: promotionIds },
+        userId: userId
+      });
+
+      // Create a map for quick lookup
+      const usageMap = {};
+      userUsages.forEach(usage => {
+        usageMap[usage.promotionId.toString()] = usage.usedCount;
+      });
+
+      // Add usage info to promotions
+      promotionsWithUsage = promotions.map(promotion => {
+        const promotionObj = promotion.toObject();
+        promotionObj.userUsedCount = usageMap[promotion._id.toString()] || 0;
+        promotionObj.userCanUse = (usageMap[promotion._id.toString()] || 0) < (promotion.maxUsagePerUser || 1);
+        return promotionObj;
+      });
+    }
+
     // Calculate statistics
     const stats = {
       total: await Promotion.countDocuments(),
@@ -79,7 +107,7 @@ exports.getAllPromotions = async (req, res) => {
     };
 
     res.json({
-      promotions,
+      promotions: promotionsWithUsage,
       pagination: {
         currentPage: page,
         totalPages,
@@ -158,6 +186,8 @@ exports.togglePromotionStatus = async (req, res) => {
 exports.applyPromotionCode = async (req, res) => {
   try {
     const { code, orderAmount } = req.body;
+    const userId = req.user?._id; // Lấy user ID từ middleware authentication
+
     const promotion = await Promotion.findOne({ code: code.toUpperCase(), isActive: true });
 
     if (!promotion) return res.status(404).json({ message: 'Invalid or inactive promotion code' });
@@ -173,6 +203,20 @@ exports.applyPromotionCode = async (req, res) => {
 
     if (orderAmount < promotion.minOrderAmount) {
       return res.status(400).json({ message: `Minimum order amount is ${promotion.minOrderAmount}` });
+    }
+
+    // Kiểm tra giới hạn sử dụng per user nếu user đã đăng nhập
+    if (userId && promotion.maxUsagePerUser) {
+      const promotionUser = await PromotionUser.findOne({
+        promotionId: promotion._id,
+        userId: userId
+      });
+
+      if (promotionUser && promotionUser.usedCount >= promotion.maxUsagePerUser) {
+        return res.status(400).json({
+          message: `You have reached the maximum usage limit (${promotion.maxUsagePerUser}) for this promotion`
+        });
+      }
     }
 
     let discount = 0;

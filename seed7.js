@@ -43,6 +43,7 @@ const promotions = [
         endDate: new Date("2025-07-01"),
         usageLimit: 100,
         usedCount: 0,
+        maxUsagePerUser: 2, // Mỗi user có thể sử dụng tối đa 2 lần
         isActive: true,
         createdBy: 1 // Admin user ID
     },
@@ -57,6 +58,7 @@ const promotions = [
         endDate: new Date("2025-12-31"),
         usageLimit: null,
         usedCount: 20,
+        maxUsagePerUser: 1, // Chỉ dành cho lần đầu tiên
         isActive: true,
         createdBy: 1 // Admin user ID
     },
@@ -72,6 +74,7 @@ const promotions = [
         endDate: new Date("2025-06-25"),
         usageLimit: 50,
         usedCount: 3,
+        maxUsagePerUser: 1, // Flash deal chỉ 1 lần per user
         isActive: true,
         createdBy: 1 // Admin user ID
     },
@@ -86,6 +89,7 @@ const promotions = [
         endDate: new Date("2024-12-31"),
         usageLimit: 200,
         usedCount: 200,
+        maxUsagePerUser: 3, // Có thể sử dụng 3 lần
         isActive: true,
         createdBy: 1 // Admin user ID
     },
@@ -101,6 +105,7 @@ const promotions = [
         endDate: new Date("2025-12-31"),
         usageLimit: 100,
         usedCount: 10,
+        maxUsagePerUser: 2, // Có thể sử dụng 2 lần
         isActive: false,
         createdBy: 1 // Admin user ID
     },
@@ -115,6 +120,7 @@ const promotions = [
     endDate: new Date("2025-12-31"),
     usageLimit: 500,
     usedCount: 0,
+    maxUsagePerUser: 5, // Có thể sử dụng 5 lần
     isActive: true,
     createdBy: 1
   },
