@@ -1,6 +1,7 @@
 const Reservation = require("../../models/reservation");
 const RefundingReservation = require("../../models/refundingReservation");
 const Promotion = require("../../models/Promotion");
+const PromotionUser = require('../../models/PromotionUser');
 const cron = require("node-cron");
 const asyncHandler= require('express-async-handler');
 const roomAvailability = require("../../models/roomAvailability");
@@ -107,6 +108,13 @@ const autoUpdateNotPaidReservation = asyncHandler(async () => {
       r.status = "CANCELLED";
       // Giảm usedCount của promotion nếu có
       if (r.promotionId) {
+        // Giảm usedCount trong PromotionUser
+        await PromotionUser.findOneAndUpdate(
+          { promotionId: r.promotionId, userId: r.user._id },
+          { $inc: { usedCount: -1 } }
+        );
+        
+        // Giảm usedCount tổng
         await Promotion.findByIdAndUpdate(r.promotionId, { $inc: { usedCount: -1 } }, { new: true });
       }
       await r.save();
