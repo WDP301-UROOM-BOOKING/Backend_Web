@@ -407,20 +407,35 @@ exports.getClaimedPromotions = async (req, res) => {
           type: promotion.type,
           // User-specific data
           claimedAt: pu.claimedAt,
-          usedCount: pu.usedCount,
+          userUsedCount: pu.usedCount, // Frontend expects userUsedCount
           maxUsagePerUser: promotion.maxUsagePerUser,
           userCanUse: canUse && isValid,
           isExpired: !isValid,
+          isClaimed: true, // All returned promotions are claimed
           status: !isValid ? 'expired' : !canUse ? 'used_up' : 'available'
         };
       });
 
+    // Sort: Available first, used up last
+    validClaimedPromotions.sort((a, b) => {
+      // Available promotions first
+      if (a.status === 'available' && b.status !== 'available') return -1;
+      if (a.status !== 'available' && b.status === 'available') return 1;
+
+      // Within same status, sort by claimed date (newest first)
+      return new Date(b.claimedAt) - new Date(a.claimedAt);
+    });
+
     res.json({
-      claimedPromotions: validClaimedPromotions,
+      promotions: validClaimedPromotions, // Frontend expects 'promotions' key
       total: validClaimedPromotions.length,
-      available: validClaimedPromotions.filter(p => p.status === 'available').length,
-      used: validClaimedPromotions.filter(p => p.status === 'used_up').length,
-      expired: validClaimedPromotions.filter(p => p.status === 'expired').length
+      stats: {
+        available: validClaimedPromotions.filter(p => p.status === 'available').length,
+        usedUp: validClaimedPromotions.filter(p => p.status === 'used_up').length,
+        expired: validClaimedPromotions.filter(p => p.status === 'expired').length,
+        public: validClaimedPromotions.filter(p => p.type === 'PUBLIC').length,
+        private: validClaimedPromotions.filter(p => p.type === 'PRIVATE').length
+      }
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

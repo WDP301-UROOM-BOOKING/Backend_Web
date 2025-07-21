@@ -11,6 +11,9 @@ router.post('/', isAdmin, promotionController.createPromotion);
 // Get all promotions (Admin or Customer) - with optional user info
 router.get('/', optionalAuth, promotionController.getAllPromotions);
 
+// Get claimed promotions (Customer only) - MUST be before /:id route
+router.get('/claimed', checkCustomer, promotionController.getClaimedPromotions);
+
 // Get single promotion by ID (Admin or Customer)
 router.get('/:id', promotionController.getPromotionById);
 
@@ -28,8 +31,5 @@ router.post('/apply', checkCustomer, promotionController.applyPromotionCode);
 
 // Claim promotion (Customer only)
 router.post('/claim', checkCustomer, promotionController.claimPromotionCode);
-
-// Get claimed promotions (Customer only)
-router.get('/claimed', checkCustomer, promotionController.getClaimedPromotions);
 
 module.exports = router;
