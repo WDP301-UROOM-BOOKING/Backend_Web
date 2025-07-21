@@ -14,8 +14,30 @@ router.get('/', optionalAuth, promotionController.getAllPromotions);
 // Get claimed promotions (Customer only) - MUST be before /:id route
 router.get('/claimed', checkCustomer, promotionController.getClaimedPromotions);
 
-// Get single promotion by ID (Admin or Customer)
-router.get('/:id', promotionController.getPromotionById);
+// Apply promotion (Customer only)
+router.post('/apply', checkCustomer, promotionController.applyPromotionCode);
+
+// Claim promotion (Customer only)
+router.post('/claim', checkCustomer, promotionController.claimPromotionCode);
+
+// ===== ADMIN PROMOTION USER MANAGEMENT ROUTES =====
+
+// Get users who have claimed/used a specific promotion (Admin only)
+router.get('/:id/users', isAdmin, promotionController.getPromotionUsers);
+
+// Get all promotions for a specific user (Admin only)
+router.get('/users/:userId', isAdmin, promotionController.getUserPromotions);
+
+// Remove user from promotion (Admin only)
+router.delete('/:id/users/:userId', isAdmin, promotionController.removeUserFromPromotion);
+
+// Reset user's usage count for a promotion (Admin only)
+router.put('/:id/users/:userId/reset', isAdmin, promotionController.resetUserPromotionUsage);
+
+
+
+// Toggle promotion status (Admin only)
+router.patch('/:id/status', isAdmin, promotionController.togglePromotionStatus);
 
 // Update promotion (Admin only)
 router.put('/:id', isAdmin, promotionController.updatePromotion);
@@ -23,13 +45,7 @@ router.put('/:id', isAdmin, promotionController.updatePromotion);
 // Delete promotion (Admin only)
 router.delete('/:id', isAdmin, promotionController.deletePromotion);
 
-// Toggle promotion status (Admin only)
-router.patch('/:id/status', isAdmin, promotionController.togglePromotionStatus);
-
-// Apply promotion (Customer only)
-router.post('/apply', checkCustomer, promotionController.applyPromotionCode);
-
-// Claim promotion (Customer only)
-router.post('/claim', checkCustomer, promotionController.claimPromotionCode);
+// Get single promotion by ID (Admin or Customer) - MUST be last among /:id routes
+router.get('/:id', promotionController.getPromotionById);
 
 module.exports = router;

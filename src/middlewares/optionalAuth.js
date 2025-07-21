@@ -21,13 +21,19 @@ const optionalAuth = async (req, res, next) => {
 
     try {
       const decoded = jwt.verify(token, process.env.SECRET_KEY);
-      
-      if (!decoded.user || decoded.user.role !== "CUSTOMER") {
+
+      if (!decoded.user) {
         req.user = null;
         return next();
       }
 
-      req.user = decoded.user;
+      // Cho phép cả CUSTOMER và ADMIN
+      if (decoded.user.role === "CUSTOMER" || decoded.user.role === "ADMIN") {
+        req.user = decoded.user;
+      } else {
+        req.user = null;
+      }
+
       next();
     } catch (jwtError) {
       // Token không hợp lệ, tiếp tục mà không set user
