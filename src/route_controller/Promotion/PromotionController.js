@@ -16,7 +16,7 @@ exports.createPromotion = async (req, res) => {
 exports.getAllPromotions = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 50; // Increase default limit for My Promotions
     const search = req.query.search || '';
     const status = req.query.status; // 'active', 'inactive', 'expired', 'upcoming', 'all'
     const sortBy = req.query.sortBy || 'createdAt';
@@ -50,6 +50,11 @@ exports.getAllPromotions = async (req, res) => {
       // Upcoming: active promotions that haven't started yet
       filter.isActive = true;
       filter.startDate = { $gt: now };
+    } else {
+      // Default: For My Promotions, show only active and upcoming promotions
+      // Filter out expired and inactive promotions at database level
+      filter.isActive = true;
+      filter.endDate = { $gte: now }; // endDate >= now (not expired)
     }
 
     // Calculate skip value
@@ -113,13 +118,51 @@ exports.getAllPromotions = async (req, res) => {
         return promotionObj;
       });
 
-      // Sort promotions: available first, used up last
-      allPromotions.sort((a, b) => {
-        // First priority: available promotions (userCanUse = true)
-        if (a.userCanUse && !b.userCanUse) return -1;
-        if (!a.userCanUse && b.userCanUse) return 1;
+      // Helper function to get promotion status
+      const getPromotionStatus = (promotion) => {
+        const now = new Date();
+        const startDate = new Date(promotion.startDate);
+        const endDate = new Date(promotion.endDate);
 
-        // Second priority: within same availability, sort by creation date (newest first)
+        // Check if user has used up their quota
+        if (!promotion.userCanUse) {
+          return 'used_up';
+        }
+
+        // Check time-based status
+        if (now < startDate) {
+          return 'upcoming';
+        } else if (now > endDate) {
+          return 'expired';
+        } else if (!promotion.isActive) {
+          return 'inactive';
+        } else {
+          return 'active';
+        }
+      };
+
+      // Sort promotions: available > coming soon > used up
+      allPromotions.sort((a, b) => {
+        const statusA = getPromotionStatus(a);
+        const statusB = getPromotionStatus(b);
+
+        // Status priority: active > upcoming > used_up > expired > inactive
+        const statusPriority = {
+          'active': 1,      // Available first
+          'upcoming': 2,    // Coming soon second
+          'used_up': 3,     // Used up third
+          'expired': 4,     // Expired fourth
+          'inactive': 5     // Inactive last
+        };
+
+        const priorityA = statusPriority[statusA] || 6;
+        const priorityB = statusPriority[statusB] || 6;
+
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB;
+        }
+
+        // Within same status, sort by creation date (newest first)
         return new Date(b.createdAt) - new Date(a.createdAt);
       });
     } else {
@@ -132,8 +175,46 @@ exports.getAllPromotions = async (req, res) => {
         return promotionObj;
       });
 
-      // Sort by creation date (newest first) for non-logged in users
-      allPromotions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      // Helper function to get promotion status for non-logged users
+      const getPromotionStatus = (promotion) => {
+        const now = new Date();
+        const startDate = new Date(promotion.startDate);
+        const endDate = new Date(promotion.endDate);
+
+        if (now < startDate) {
+          return 'upcoming';
+        } else if (now > endDate) {
+          return 'expired';
+        } else if (!promotion.isActive) {
+          return 'inactive';
+        } else {
+          return 'active';
+        }
+      };
+
+      // Sort promotions: available > coming soon > expired/inactive
+      allPromotions.sort((a, b) => {
+        const statusA = getPromotionStatus(a);
+        const statusB = getPromotionStatus(b);
+
+        // Status priority: active > upcoming > expired > inactive
+        const statusPriority = {
+          'active': 1,      // Available first
+          'upcoming': 2,    // Coming soon second
+          'expired': 3,     // Expired third
+          'inactive': 4     // Inactive last
+        };
+
+        const priorityA = statusPriority[statusA] || 5;
+        const priorityB = statusPriority[statusB] || 5;
+
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB;
+        }
+
+        // Within same status, sort by creation date (newest first)
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
     }
 
     // Calculate statistics
