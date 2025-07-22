@@ -4,6 +4,7 @@ const HotelController = require("./HotelController");
 const checkCustomer = require("../../middlewares/checkCustomer");
 const checkGuest = require("../../middlewares/cheskGuest");
 const checkOwner = require("../../middlewares/checkOwner");
+const { isAdmin } = require("../../middlewares/checkAdmin");
 const upload = require("../../middlewares/uploadMiddleware");
 
 HotelRouter.get("/get-all-hotel", HotelController.getAllHotels);
@@ -34,5 +35,12 @@ HotelRouter.post(
 HotelRouter.delete("/delete_images", checkOwner, HotelController.deleteHotelImages);
 
 HotelRouter.get("/get-top-hotel-location", HotelController.getTop5HotelsByLocation);
+
+HotelRouter.get("/get-hotels-not-approval", HotelController.getAllHotelsNotApproved);
+
+HotelRouter.put("/update-approval-status/:approvalId", isAdmin, HotelController.updateApprovalStatus);
+
+HotelRouter.get("/get-approval-by-id/:id", HotelController.getHotelsByOwnerId);
+
 
 module.exports = HotelRouter;
