@@ -1,5 +1,5 @@
 const generateToken = require("../../utils/generateToken");
-const { cloudinary } = require("../../config/cloudinaryConfig");
+const cloudinary  = require("../../config/cloudinaryConfig");
 const bcrypt = require("bcryptjs");
 const User = require("../../models/user");
 const generateVerificationToken = require("../../utils/generateVerificationToken");
@@ -7,6 +7,7 @@ const sendEmail = require("../../utils/sendEmail");
 const { emailVerificationTemplate } = require("../../utils/emailTemplates");
 const admin = require("../../config/firebaseAdminConfig").default;
 const Reservation = require("../../models/reservation");
+const streamifier = require("streamifier");
 
 const Hotel = require("../../models/hotel")
 exports.loginCustomer = async (req, res) => {
@@ -436,16 +437,35 @@ exports.updateAvatar = async (req, res) => {
       await cloudinary.uploader.destroy(user.image.public_ID);
     }
 
-    // Upload ảnh mới lên Cloudinary
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      folder: `avatar_${userId}`, // tùy chọn: upload vào thư mục riêng
-      public_id: `avatar_${userId}`, // Đảm bảo tên tệp duy nhất
-      resource_type: "image",
-    });
+    // Kiểm tra file upload
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({ MsgNo: "No file uploaded" });
+    }
+
+    // Upload buffer trực tiếp lên Cloudinary
+    const uploadFromBuffer = (fileBuffer) => {
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: `avatar_${userId}`,
+            public_id: `avatar_${userId}`,
+            resource_type: "image",
+            overwrite: true,
+          },
+          (error, result) => {
+            if (result) resolve(result);
+            else reject(error);
+          }
+        );
+        streamifier.createReadStream(fileBuffer).pipe(stream);
+      });
+    };
+
+    const result = await uploadFromBuffer(req.file.buffer);
 
     const newImage = {
-      public_ID: result.public_id, // không có .jpg/.png, ví dụ: "avatars/xyz123"
-      url: result.secure_url, // URL chính thức từ Cloudinary
+      public_ID: result.public_id,
+      url: result.secure_url,
     };
 
     user.image = newImage;
