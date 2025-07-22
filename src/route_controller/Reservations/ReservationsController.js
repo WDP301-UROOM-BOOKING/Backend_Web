@@ -179,6 +179,10 @@ const initReservationCronJobs = asyncHandler(async () => {
       r.status = "CHECKED IN";
       await r.save();
       console.log(`Reservation ${r._id} đã được chuyển sang trạng thái CHECKED IN.`);
+    }else if (now > checkinDate && now > checkoutDate) {
+      r.status = "CHECKED OUT";
+      await r.save();
+      console.log(`Reservation ${r._id} đã được chuyển sang trạng thái CHECKED OUT.`);
     }
   }
 
@@ -198,7 +202,7 @@ const initReservationCronJobs = asyncHandler(async () => {
 });
 
 cron.schedule(
-  "0 0,12 * * *",
+  "*/1 * * * *",
   () => {
     // autoUpdateReservationStatus();
     initReservationCronJobs();
