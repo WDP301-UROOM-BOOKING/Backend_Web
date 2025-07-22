@@ -7,7 +7,8 @@ const mongoose = require("mongoose");
 const room = require("../../models/room");
 const HotelService = require("../../models/hotelService");
 const stripe = require("stripe")(process.env.STRIPE_API_KEY);
-const Promotion = require("../../models/Promotion"); 
+const Promotion = require("../../models/Promotion");
+const PromotionUser = require("../../models/PromotionUser");
 const RefundingReservation = require("../../models/refundingReservation")
 
 // Constants for booking statuses and messages
@@ -105,6 +106,12 @@ exports.createBooking = asyncHandler(async (req, res) => {
             { $inc: { usedCount: -1 } },
             { new: true }
           );
+
+          // Giảm usedCount trong PromotionUser cho promotion cũ
+          await PromotionUser.findOneAndUpdate(
+            { promotionId: unpaidReservation.promotionId, userId: user._id },
+            { $inc: { usedCount: -1 } }
+          );
         }
         // Tăng usedCount của promotion mới nếu có
         if (promotionId) {
@@ -112,6 +119,19 @@ exports.createBooking = asyncHandler(async (req, res) => {
             promotionId,
             { $inc: { usedCount: 1 } },
             { new: true }
+          );
+
+          // Tạo hoặc cập nhật PromotionUser record cho promotion mới
+          await PromotionUser.findOneAndUpdate(
+            { promotionId: promotionId, userId: user._id },
+            {
+              $inc: { usedCount: 1 },
+              $set: {
+                lastUsedAt: new Date(),
+                lastReservationId: unpaidReservation._id
+              }
+            },
+            { upsert: true, new: true }
           );
         }
       }
@@ -145,6 +165,19 @@ exports.createBooking = asyncHandler(async (req, res) => {
         promotionId,
         { $inc: { usedCount: 1 } },
         { new: true }
+      );
+
+      // Tạo hoặc cập nhật PromotionUser record
+      await PromotionUser.findOneAndUpdate(
+        { promotionId: promotionId, userId: user._id },
+        {
+          $inc: { usedCount: 1 },
+          $set: {
+            lastUsedAt: new Date(),
+            lastReservationId: null // Sẽ được cập nhật sau khi tạo reservation
+          }
+        },
+        { upsert: true, new: true }
       );
     }
 
@@ -224,6 +257,14 @@ exports.createBooking = asyncHandler(async (req, res) => {
     });
 
     await reservation.save();
+
+    // Cập nhật lastReservationId trong PromotionUser nếu có promotionId
+    if (promotionId) {
+      await PromotionUser.findOneAndUpdate(
+        { promotionId: promotionId, userId: user._id },
+        { $set: { lastReservationId: reservation._id } }
+      );
+    }
 
     // Update room availability
     for (const { room, amount } of roomDetails) {
@@ -476,6 +517,12 @@ exports.cancelPayment = asyncHandler(async (req, res) => {
           reservation.promotionId,
           { $inc: { usedCount: -1 } },
           { new: true }
+        );
+
+        // Giảm usedCount trong PromotionUser
+        await PromotionUser.findOneAndUpdate(
+          { promotionId: reservation.promotionId, userId: reservation.user },
+          { $inc: { usedCount: -1 } }
         );
       }
       try {

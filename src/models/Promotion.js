@@ -54,15 +54,21 @@ const promotionSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    maxUsagePerUser: {
+      type: Number,
+      default: 1,
+      min: 1,
+    },
+    // Thêm các field mới
+    type: {
+      type: String,
+      enum: ['PUBLIC', 'PRIVATE'],
+      default: 'PUBLIC',
+    },
     isActive: {
       type: Boolean,
       default: true,
     },
-    // createdBy: {
-    //   type: mongoose.Schema.Types.ObjectId,
-    //   ref: 'User',
-    //   required: true,
-    // },
   },
   { 
     versionKey: false,

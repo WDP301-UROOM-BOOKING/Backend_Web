@@ -95,7 +95,7 @@ exports.getHotelsByIds = asyncHandler(async (req, res) => {
 });
 
 exports.getHotelsByOwnerId = asyncHandler(async (req, res) => {
-  const { id } = req.body;
+  const { id } = req.params;
 
   if (!id) {
     return res.status(400).json({
@@ -909,3 +909,60 @@ exports.deleteHotelImages = asyncHandler(async (req, res) => {
     });
   }
 });
+
+// get hotels Not Approved
+exports.getAllHotelsNotApproved = asyncHandler(async (req, res) => {
+  const hotels = await Hotel.find({ adminStatus: { $ne: "APPROVED" } })
+    .populate("services")
+    .populate("facilities");
+
+  if (hotels.length === 0) {
+    return res.status(404).json({
+      error: true,
+      message: "No unapproved hotels found",
+    });
+  }
+
+  return res.status(200).json({
+    error: false,
+    hotels,
+    message: "Get all hotels not approved success",
+  });
+});
+
+
+// update status hotel not approval
+exports.updateApprovalStatus = async (req, res) => {
+  try {
+    const { approvalId } = req.params;
+    const { adminStatus } = req.body;
+
+    console.log("body: ", req.body);
+
+    // Kiểm tra hợp lệ giá trị adminStatus
+    const validStatuses = ["APPROVED", "PENDING", "REJECTED"];
+    if (!validStatuses.includes(adminStatus)) {
+      return res.status(400).json({ message: "Invalid adminStatus value" });
+    }
+
+    // Tìm khách sạn theo ID
+    const hotel = await Hotel.findById(approvalId);
+    if (!hotel) {
+      return res.status(404).json({ message: "Hotel not found" });
+    }
+
+    // Cập nhật trạng thái phê duyệt
+    hotel.adminStatus = adminStatus;
+    await hotel.save();
+
+    res.status(200).json({
+      message: "Approval status updated successfully",
+      hotel,
+    });
+  } catch (error) {
+    console.error("Error updating approval status:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+

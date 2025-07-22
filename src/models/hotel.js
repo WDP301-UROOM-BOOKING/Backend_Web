@@ -75,7 +75,7 @@ const hotelSchema = new Schema(
     ],
     adminStatus: {
       type: String,
-      enum: ["PENDING", "APPROVED"],
+      enum: ["PENDING", "APPROVED", "REJECTED"],
       default: "PENDING",
     },
     ownerStatus: {

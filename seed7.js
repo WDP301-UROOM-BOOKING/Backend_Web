@@ -43,6 +43,8 @@ const promotions = [
         endDate: new Date("2025-07-01"),
         usageLimit: 100,
         usedCount: 0,
+        maxUsagePerUser: 2, // Mỗi user có thể sử dụng tối đa 2 lần
+        type: "PUBLIC",
         isActive: true,
         createdBy: 1 // Admin user ID
     },
@@ -57,6 +59,8 @@ const promotions = [
         endDate: new Date("2025-12-31"),
         usageLimit: null,
         usedCount: 20,
+        maxUsagePerUser: 1, // Chỉ dành cho lần đầu tiên
+        type: "PUBLIC",
         isActive: true,
         createdBy: 1 // Admin user ID
     },
@@ -72,6 +76,8 @@ const promotions = [
         endDate: new Date("2025-06-25"),
         usageLimit: 50,
         usedCount: 3,
+        maxUsagePerUser: 1, // Flash deal chỉ 1 lần per user
+        type: "PUBLIC",
         isActive: true,
         createdBy: 1 // Admin user ID
     },
@@ -86,6 +92,8 @@ const promotions = [
         endDate: new Date("2024-12-31"),
         usageLimit: 200,
         usedCount: 200,
+        maxUsagePerUser: 3, // Có thể sử dụng 3 lần
+        type: "PUBLIC",
         isActive: true,
         createdBy: 1 // Admin user ID
     },
@@ -101,6 +109,8 @@ const promotions = [
         endDate: new Date("2025-12-31"),
         usageLimit: 100,
         usedCount: 10,
+        maxUsagePerUser: 2, // Có thể sử dụng 2 lần
+        type: "PUBLIC",
         isActive: false,
         createdBy: 1 // Admin user ID
     },
@@ -115,6 +125,8 @@ const promotions = [
     endDate: new Date("2025-12-31"),
     usageLimit: 500,
     usedCount: 0,
+    maxUsagePerUser: 5, // Có thể sử dụng 5 lần
+    type: "PUBLIC",
     isActive: true,
     createdBy: 1
   },
@@ -130,6 +142,59 @@ const promotions = [
     endDate: new Date("2025-12-31"),
     usageLimit: 100,
     usedCount: 5,
+    maxUsagePerUser: 1,
+    type: "PUBLIC",
+    isActive: true,
+    createdBy: 1
+  },
+  // Private Promotions - chỉ có thể claim bằng cách nhập code
+  {
+    code: "SECRET20",
+    name: "Secret Deal 20%",
+    description: "Hidden promotion - 20% off for those who know the code!",
+    discountType: "PERCENTAGE",
+    discountValue: 20,
+    maxDiscountAmount: 30,
+    minOrderAmount: 100,
+    startDate: new Date("2025-01-01"),
+    endDate: new Date("2025-12-31"),
+    usageLimit: 50,
+    usedCount: 0,
+    maxUsagePerUser: 3,
+    type: "PRIVATE",
+    isActive: true,
+    createdBy: 1
+  },
+  {
+    code: "INSIDER15",
+    name: "Insider Exclusive",
+    description: "Private promotion for insiders - 15$ off!",
+    discountType: "FIXED_AMOUNT",
+    discountValue: 15,
+    minOrderAmount: 80,
+    startDate: new Date("2025-07-01"),
+    endDate: new Date("2025-12-31"),
+    usageLimit: 30,
+    usedCount: 0,
+    maxUsagePerUser: 2,
+    type: "PRIVATE",
+    isActive: true,
+    createdBy: 1
+  },
+  {
+    code: "HIDDEN50",
+    name: "Hidden Treasure",
+    description: "Secret promotion - 50% off but limited usage!",
+    discountType: "PERCENTAGE",
+    discountValue: 50,
+    maxDiscountAmount: 100,
+    minOrderAmount: 200,
+    startDate: new Date("2025-07-01"),
+    endDate: new Date("2025-08-31"),
+    usageLimit: 10,
+    usedCount: 0,
+    maxUsagePerUser: 1,
+    type: "PRIVATE",
     isActive: true,
     createdBy: 1
   },
